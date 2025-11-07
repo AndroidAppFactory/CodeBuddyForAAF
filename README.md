@@ -36,15 +36,12 @@ CodeBuddyForAAF/
 
 ### 3. 开始开发
 
-```bash
-# 使用VS Code打开工作区
-code AndroidAppFactory.code-workspace
+**直接在CodeBuddy开发，或者进入Template-Empty开始开发**
 
+```bash
 # 或者直接进入Template-Empty开始开发
 cd Template-Empty
 ```
-
-### 4. 使用
 
 **默认事例**
 
