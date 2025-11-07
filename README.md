@@ -44,9 +44,15 @@ code AndroidAppFactory.code-workspace
 cd Template-Empty
 ```
 
-### 4. 使用事例
+### 4. 使用
+
+**默认事例**
 
 目前AAF 本身已经提供了一系列接口的调用展示及测试用例，可以参考 ./AndroidAppFactory/BaseDebug 和 ./AndroidAppFactory/BaseDebugCompose 中的事例
+
+**功能查询**
+
+完成导入以后，你可以直接通过文字交互来查询是否具有对应的能力和功能
 
 ## 常见问题
 
