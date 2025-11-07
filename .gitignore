@@ -26,6 +26,7 @@ buildNumber.properties
 /target/
 .idea_modules/
 local.properties
+*.code-workspace
 
 ######################
 # gradle
@@ -56,3 +57,4 @@ aafRepo
 AndroidAppFactory/
 AndroidAppFactory-Doc/
 Template-Empty/
+AndroidAppFactory.code-workspace

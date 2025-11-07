@@ -1,25 +1,28 @@
 ---
-description: AAF (AndroidAPPFactory) 开发规范和工作流程规则
+description: AAF (AndroidAPPFactory) 框架通用开发规范
 alwaysApply: true
 enabled: true
 updatedAt: 2025-11-07T06:30:00.000Z
 provider: 
 ---
 
-## AAF 开发规范
+## AAF 框架通用开发规范
 
 ### 0. 术语说明
 - **AAF**: AndroidAPPFactory 的简称，贯穿所有对话
 
-### 1. 项目结构和开发目录
-- **开发目录**: 所有新代码都在 `Template-Empty` 项目中编写
-- **参考目录**: `AndroidAppFactory` - 用于了解框架功能和组件实现
-- **文档目录**: `AndroidAppFactory-Doc` - 框架使用文档和API说明
-- **重要**: 不要修改 `AndroidAppFactory` 和 `AndroidAppFactory-Doc` 的内容
+### 1. 项目结构说明
+- **AndroidAppFactory**: AAF 框架核心代码库，用于了解框架功能和组件实现
+- **AndroidAppFactory-Doc**: 框架使用文档和API说明文档
+- **Template-Empty**: Demo 开发目录（详见 Demo 规则）
+- **Template_Android**: Android 模板项目
+- **Template-AAF**: AAF 模板项目
+- **配置文件**: 
+  - `AndroidAppFactory.code-workspace` - VS Code 工作区配置
+  - `init.sh` - 项目初始化脚本
+  - `.codebuddy/rules/` - 项目开发规则配置
 
-### 2. 技术栈和实现原则
-- **框架优先**: 优先使用 AndroidAppFactory 框架提供的组件和功能
-- **自主实现**: 当框架无法满足需求时，可以自主实现
+### 2. 技术栈选择
 - **UI技术**: 优先使用 Compose，传统 View 系统作为备选
 - **编程语言**: Kotlin 优先，Java 兼容
 
@@ -27,8 +30,4 @@ provider:
 - **开发完成标准**: 代码编写完成后必须通过编译测试
 - **测试验证**: 确保功能正常运行，无编译错误
 - **任务完成**: 只有测试通过才算任务真正完成
-
-### 4. 部署和调试
-- **ADB检测**: 自动检测 ADB 连接状态
-- **自动部署**: ADB 连接时，自动安装 APK 并启动应用
-- **测试便利**: 为用户提供即时的测试体验
+- **代码提交确认**: 所有代码修改必须经过用户明确确认才可以提交到版本控制

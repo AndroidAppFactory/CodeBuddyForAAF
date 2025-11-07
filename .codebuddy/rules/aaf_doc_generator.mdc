@@ -1,0 +1,78 @@
+---
+description: AAF 模块文档生成规则 - 基于LibAAF模板生成简洁的模块文档
+alwaysApply: false
+enabled: true
+updatedAt: 2025-11-07T07:18:01.308Z
+provider: 
+---
+
+# AAF 模块文档生成规则
+
+## 触发条件
+当用户说"帮我整理一下 [模块名] 的文档"时，自动执行文档生成流程。
+
+## 文档生成流程
+1. **分析目标模块**
+   - 扫描模块源码结构
+   - 识别主要功能和类
+   - 提取关键API和方法
+
+2. **参考文档模板**
+   - 使用 LibAAF 文档格式作为模板
+   - 保持简洁风格，避免过度详细
+
+3. **生成文档内容**
+   - 按照标准格式组织内容
+   - 重点突出核心功能
+   - 提供基本使用示例
+
+## 文档标准格式
+基于 `lib-aaf-tools.md` 的格式：
+
+```markdown
+# [模块名]
+
+![模块名](https://img.shields.io/badge/AndroidAppFactory-[模块名]-brightgreen)
+[ ![Github](https://img.shields.io/badge/Github-[模块名]-brightgreen?style=social) ](https://github.com/bihe0832/AndroidAppFactory/tree/master/[模块目录])
+[ ![Maven Central](https://img.shields.io/maven-central/v/com.bihe0832.android/[maven-artifact]) ](https://search.maven.org/artifact/com.bihe0832.android/[maven-artifact])
+
+## 功能简介
+
+[简洁描述模块主要功能]
+ 
+## 组件信息
+
+#### 引用仓库
+
+引用仓库可以参考 [组件使用](./../start.md) 中添加依赖的部分
+
+#### 组件使用
+
+\```groovy
+implementation 'com.bihe0832.android:[maven-artifact]:+'
+\```
+
+## 组件功能
+
+### [主要功能类1]
+
+- [功能描述]
+
+### [主要功能类2]
+
+- [功能描述]
+
+[如有必要，添加简单的代码示例]
+```
+
+## 文档编写原则
+1. **简洁为主**: 内容精炼，避免冗长说明
+2. **突出重点**: 重点介绍核心功能和主要API
+3. **统一格式**: 严格按照模板格式编写
+4. **实用导向**: 重点说明如何使用，而非实现细节
+
+## 输出要求
+- 生成完整的markdown文档
+- 文件名格式：直接使用 `[maven-artifact].md`（如：`lib-aaf-tools.md`、`common-audio-wave.md`）
+- 内容控制在合理篇幅内（通常不超过200行）
+- 确保所有链接和引用正确
