@@ -26,6 +26,11 @@ provider:
    - 重点突出核心功能
    - 提供基本使用示例
 
+4. **更新SUMMARY.md索引**
+   - 根据模块类型确定在SUMMARY.md中的位置
+   - 添加新文档的索引条目
+   - 保持索引结构的一致性
+
 ## 文档标准格式
 基于 `lib-aaf-tools.md` 的格式：
 
@@ -65,14 +70,63 @@ implementation 'com.bihe0832.android:[maven-artifact]:+'
 [如有必要，添加简单的代码示例]
 ```
 
+## SUMMARY.md索引规则
+
+### 模块分类和索引位置
+根据模块类型，在SUMMARY.md中的不同位置添加索引：
+
+1. **基础功能模块** (`lib-*`)
+   - 位置：`* [组件使用]() > * [基础组件信息]() > * [基础功能]()`
+   - 格式：`* [模块名](use/libs/noui/模块名.md)`
+
+2. **UI相关模块** (`lib-*` 但包含UI组件)
+   - 位置：`* [组件使用]() > * [基础组件信息]() > * [UI相关]()`
+   - 格式：`* [模块名](use/libs/ui/模块名.md)`
+
+3. **公共组件** (`common-*`)
+   - 位置：`* [组件使用]() > * [公共组件信息]() > * [公共组件]()`
+   - 格式：`* [模块名](use/common/模块名.md)`
+
+4. **三方组件** (`services-*`)
+   - 位置：`* [组件使用]() > * [三方组件信息]() > * [三方组件]()`
+   - 格式：`* [模块名](use/services/模块名.md)`
+
+5. **路由组件** (`lib-router*`)
+   - 位置：`* [组件使用]() > * [路由组件信息]()`
+   - 格式：`* [模块名](use/router/模块名.md)`
+
+### 索引插入规则
+- 在对应分类下按照AAF项目dependencies文件中的模块定义顺序插入
+- 保持现有格式和缩进
+- 确保路径正确对应文档位置
+- **必须先向用户提供建议的插入位置，经用户确认后再执行插入操作**
+- 参考AAF项目中dependencies.gradle的加载顺序来确定新文档的插入位置：
+  1. dependencies_lib.gradle (基础lib模块)
+  2. dependencies_common.gradle (公共组件)
+  3. dependencies_lock_widget.gradle (锁屏组件)
+  4. dependencies_tbs.gradle (TBS相关)
+  5. dependencies_services.gradle (三方服务)
+  6. dependencies_asr.gradle (语音识别相关)
+  7. dependencies_deprecated.gradle (计划废弃组件)
+
 ## 文档编写原则
 1. **简洁为主**: 内容精炼，避免冗长说明
 2. **突出重点**: 重点介绍核心功能和主要API
 3. **统一格式**: 严格按照模板格式编写
 4. **实用导向**: 重点说明如何使用，而非实现细节
 
+## 完整执行流程
+1. 生成完整的markdown文档
+2. 确定文档在AndroidAppFactory-Doc中的正确路径
+3. 根据模块类型确定在SUMMARY.md中的插入位置
+4. **向用户确认SUMMARY.md索引的插入位置**
+5. 用户确认后，在SUMMARY.md中添加对应索引
+6. 验证索引链接的正确性
+
 ## 输出要求
 - 生成完整的markdown文档
 - 文件名格式：直接使用 `[maven-artifact].md`（如：`lib-aaf-tools.md`、`common-audio-wave.md`）
 - 内容控制在合理篇幅内（通常不超过200行）
 - 确保所有链接和引用正确
+- **必须向用户确认SUMMARY.md索引的插入位置后再添加**
+- **禁止未经用户确认直接修改SUMMARY.md文件**

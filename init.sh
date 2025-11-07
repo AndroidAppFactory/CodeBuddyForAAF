@@ -32,10 +32,12 @@ log_error() {
 # 获取脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 PROJECT_DIR="$SCRIPT_DIR"  # 直接在当前项目目录下克隆
+PARENT_DIR="$(dirname "$SCRIPT_DIR")"  # 父目录
 
 log_info "开始执行AAF CodeBuddy初始化：$(date '+%Y-%m-%d %H:%M:%S')"
 log_info "脚本目录：$SCRIPT_DIR"
 log_info "项目目录：$PROJECT_DIR"
+log_info "父目录：$PARENT_DIR"
 
 # 克隆AAF项目
 clone_aaf_project() {
@@ -87,14 +89,18 @@ check_aaf_projects() {
     local projects=("AndroidAppFactory" "AndroidAppFactory-Doc" "Template-Empty")
     local missing_projects=()
     local existing_projects=()
+    local parent_projects=()
     
     # 检查哪些项目存在，哪些不存在
     for project in "${projects[@]}"; do
-        if [ ! -d "$PROJECT_DIR/$project" ]; then
-            missing_projects+=("$project")
-        else
+        if [ -d "$PROJECT_DIR/$project" ]; then
             existing_projects+=("$project")
-            log_success "找到项目：$project"
+            log_success "找到项目（当前目录）：$project"
+        elif [ -d "$PARENT_DIR/$project" ]; then
+            parent_projects+=("$project")
+            log_success "找到项目（父目录）：$project"
+        else
+            missing_projects+=("$project")
         fi
     done
     
@@ -117,7 +123,7 @@ check_aaf_projects() {
         log_success "所有缺失的项目已成功克隆"
     fi
     
-    # 检查现有项目是否需要移除git支持
+    # 检查现有项目是否需要移除git支持（只处理当前目录的项目）
     log_info "检查现有项目的git支持..."
     for project in "${existing_projects[@]}"; do
         if [ -d "$PROJECT_DIR/$project/.git" ]; then
@@ -127,6 +133,11 @@ check_aaf_projects() {
         else
             log_info "项目 $project 已经没有git支持"
         fi
+    done
+    
+    # 对于父目录的项目，不移除git支持
+    for project in "${parent_projects[@]}"; do
+        log_info "项目 $project 位于父目录，保留git支持"
     done
     
     log_success "所有必要的AAF项目都已就绪"
@@ -170,7 +181,13 @@ check_development_environment() {
 init_template_empty() {
     local template_dir="$PROJECT_DIR/Template-Empty"
     
-    if [ ! -d "$template_dir" ]; then
+    # 检查当前目录和父目录
+    if [ -d "$PROJECT_DIR/Template-Empty" ]; then
+        template_dir="$PROJECT_DIR/Template-Empty"
+    elif [ -d "$PARENT_DIR/Template-Empty" ]; then
+        template_dir="$PARENT_DIR/Template-Empty"
+        log_info "使用父目录中的Template-Empty项目"
+    else
         log_error "Template-Empty项目不存在"
         return 1
     fi
@@ -208,7 +225,13 @@ init_template_empty() {
 init_android_app_factory() {
     local aaf_dir="$PROJECT_DIR/AndroidAppFactory"
     
-    if [ ! -d "$aaf_dir" ]; then
+    # 检查当前目录和父目录
+    if [ -d "$PROJECT_DIR/AndroidAppFactory" ]; then
+        aaf_dir="$PROJECT_DIR/AndroidAppFactory"
+    elif [ -d "$PARENT_DIR/AndroidAppFactory" ]; then
+        aaf_dir="$PARENT_DIR/AndroidAppFactory"
+        log_info "使用父目录中的AndroidAppFactory项目"
+    else
         log_error "AndroidAppFactory项目不存在"
         return 1
     fi
@@ -247,8 +270,14 @@ verify_project_setup() {
     log_info "验证项目配置..."
     
     # 验证Template-Empty项目
-    local template_dir="$PROJECT_DIR/Template-Empty"
-    if [ -d "$template_dir" ]; then
+    local template_dir=""
+    if [ -d "$PROJECT_DIR/Template-Empty" ]; then
+        template_dir="$PROJECT_DIR/Template-Empty"
+    elif [ -d "$PARENT_DIR/Template-Empty" ]; then
+        template_dir="$PARENT_DIR/Template-Empty"
+    fi
+    
+    if [ -n "$template_dir" ] && [ -d "$template_dir" ]; then
         cd "$template_dir"
         if [ -f "gradlew" ]; then
             log_info "检查Template-Empty项目依赖..."
@@ -310,9 +339,8 @@ main() {
     log_info "========================================"
     
     log_info "接下来可以："
-    log_info "1. 使用VS Code打开AndroidAppFactory.code-workspace工作区"
-    log_info "2. 在Template-Empty项目中开始开发"
-    log_info "3. 参考README.md了解详细开发流程"
+    log_info "1. 在Template-Empty项目中开始开发"
+    log_info "2. 参考README.md了解详细开发流程"
     
     cd "$SCRIPT_DIR"
 }
