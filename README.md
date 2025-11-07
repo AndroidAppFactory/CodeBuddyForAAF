@@ -1,0 +1,2 @@
+# CodeBuddyForAAF
+一个在CodeBuddy中嵌入AAF的完整工作区
