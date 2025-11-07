@@ -44,13 +44,13 @@ clone_aaf_project() {
     
     case $project_name in
         "AndroidAppFactory")
-            git_url="https://github.com/bihe0832/AndroidAppFactory.git"
+            git_url="https://github.com/AndroidAppFactory/AndroidAppFactory.git"
             ;;
         "AndroidAppFactory-Doc")
-            git_url="https://github.com/bihe0832/AndroidAppFactory-Doc.git"
+            git_url="https://github.com/AndroidAppFactory/AndroidAppFactory-Doc.git"
             ;;
         "Template-Empty")
-            git_url="https://github.com/bihe0832/Template-Empty.git"
+            git_url="https://github.com/AndroidAppFactory/Template-Empty.git"
             ;;
         *)
             log_error "未知的项目名称：$project_name"
