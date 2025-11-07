@@ -1,0 +1,13 @@
+---
+description: 
+alwaysApply: true
+enabled: true
+updatedAt: 2025-11-06T02:21:35.248Z
+provider: 
+---
+0. 所有对话中的AAF，都是AndroidAPPFactory的简称
+1. 所有的功能开发相关的代码没有指定默认都写在 Templete-Empty 中
+2. 尽可能使用 AndroidAPPFactory 的代码来实现，如果不行就自己发挥
+3. UI 优先用 Compose，编程语言使用Kotlin
+4. 所有的Demo 再开发完成以后自行测试并编译确认没有问题才算完成
+5. 在编译完成以后，可以直接运行ADB命令将APK安装并拉起供我测试

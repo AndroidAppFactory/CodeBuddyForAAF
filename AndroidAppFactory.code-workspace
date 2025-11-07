@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "./AndroidAppFactory"
+		},
+		{
+			"path": "./AndroidAppFactory-Doc"
+		},
+		{
+			"path": "./Template-Empty"
+		}
+	],
+	"settings": {}
+}
