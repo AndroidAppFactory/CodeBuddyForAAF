@@ -6,7 +6,7 @@
 
 ```
 CodeBuddyForAAF/
-├── AndroidAppFactory.code-workspace  # VS Code工作区配置
+├── .codebuddy/rules                  # codebuddy 规则
 ├── init.sh                          # 项目初始化脚本
 ├── README.md                        # 项目说明和开发指南（本文件）
 ├── .gitignore                       # Git忽略文件配置
