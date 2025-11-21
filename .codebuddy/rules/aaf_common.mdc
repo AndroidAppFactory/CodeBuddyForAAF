@@ -18,7 +18,6 @@ provider:
 - **Template_Android**: Android 模板项目
 - **Template-AAF**: AAF 模板项目
 - **配置文件**: 
-  - `AndroidAppFactory.code-workspace` - VS Code 工作区配置
   - `init.sh` - 项目初始化脚本
   - `.codebuddy/rules/` - 项目开发规则配置
 
@@ -27,7 +26,7 @@ provider:
 - **编程语言**: Kotlin 优先，Java 兼容
 
 ### 3. 开发和测试流程
-- **开发完成标准**: 代码编写完成后必须通过编译测试
+- **开发完成标准**: 代码编写完成后必须通过编译测试，所有没有使用到的 import 都要 remove 掉
 - **测试验证**: 确保功能正常运行，无编译错误
 - **任务完成**: 只有测试通过才算任务真正完成
 - **代码提交确认**: 所有代码修改必须经过用户明确确认才可以提交到版本控制

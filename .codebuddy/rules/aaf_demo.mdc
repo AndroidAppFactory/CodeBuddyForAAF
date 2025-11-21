@@ -12,7 +12,7 @@ provider:
 - **开发目录**: 所有新代码都在 `Template-Empty` 项目中编写
 - **项目定位**: Template-Empty 是 AAF 框架的演示和测试项目
 - **开发原则**: 在此项目中实践和验证 AAF 框架的各种功能
-- **重要**: 不要修改非 `Template-Empty` 的内容
+- **重要**: 不要修改非 `Template-Empty` 的内容，如果`Template-Empty`编译存在问题，直接尝试修复，不要尝试其他工程
 
 ### 2. Demo 实现原则
 - **框架优先**: 优先使用 AndroidAppFactory 框架提供的组件和功能
