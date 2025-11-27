@@ -2,31 +2,78 @@
 description: AAF (AndroidAPPFactory) 框架通用开发规范
 alwaysApply: true
 enabled: true
-updatedAt: 2025-11-07T06:30:00.000Z
+updatedAt: 2025-11-27T03:30:00.000Z
 provider: 
 ---
 
-## AAF 框架通用开发规范
+# AAF 框架通用开发规范
 
-### 0. 术语说明
-- **AAF**: AndroidAPPFactory 的简称，贯穿所有对话
+## 1. 术语说明
 
-### 1. 项目结构说明
-- **AndroidAppFactory**: AAF 框架核心代码库，用于了解框架功能和组件实现
-- **AndroidAppFactory-Doc**: 框架使用文档和API说明文档
-- **Template-Empty**: Demo 开发目录（详见 Demo 规则）
-- **Template_Android**: Android 模板项目
-- **Template-AAF**: AAF 模板项目
-- **配置文件**: 
-  - `init.sh` - 项目初始化脚本
-  - `.codebuddy/rules/` - 项目开发规则配置
+- **AAF**: AndroidAPPFactory 的简称，在所有对话中统一使用此缩写
 
-### 2. 技术栈选择
-- **UI技术**: 优先使用 Compose，传统 View 系统作为备选
-- **编程语言**: Kotlin 优先，Java 兼容
+## 2. 项目结构
 
-### 3. 开发和测试流程
-- **开发完成标准**: 代码编写完成后必须通过编译测试，所有没有使用到的 import 都要 remove 掉
-- **测试验证**: 确保功能正常运行，无编译错误
-- **任务完成**: 只有测试通过才算任务真正完成
-- **代码提交确认**: 所有代码修改必须经过用户明确确认才可以提交到版本控制
+### 2.1 项目目录布局
+
+| 项目名称 | 说明 | 位置 |
+|---------|------|------|
+| **CodeBuddyForAAF** | 规则和配置管理仓库 | 当前工作区根目录 |
+| **AndroidAppFactory** | AAF 框架核心代码库 | 同级或父目录同级 |
+| **AndroidAppFactory-Doc** | 框架文档和 API 说明 | 同级或父目录同级 |
+| **Template-Empty** | Demo 开发目录 | 同级或父目录同级 |
+| **Template_Android** | Android 模板项目 | 同级或父目录同级 |
+| **Template-AAF** | AAF 模板项目 | 同级或父目录同级 |
+
+### 2.2 项目定位策略
+
+查找 AAF 相关项目时，按以下顺序：
+1. 优先在当前工作区同级目录查找（如 `./AndroidAppFactory`）
+2. 若同级不存在，到父目录同级查找（如 `../AndroidAppFactory`）
+3. 使用 `find` 命令辅助定位具体文件
+
+### 2.3 配置文件
+
+- `init.sh` - 项目初始化脚本，用于克隆和配置 AAF 相关项目
+- `.codebuddy/rules/` - 开发规则配置目录
+
+## 3. 技术栈规范
+
+### 3.1 编程语言
+- **首选**: Kotlin
+- **兼容**: Java（用于维护旧代码）
+
+### 3.2 UI 技术选型
+- **首选**: Jetpack Compose（现代声明式 UI）
+- **备选**: 传统 View 系统（特定场景或兼容性需求）
+
+## 4. 开发流程规范
+
+### 4.1 代码质量标准
+- ✅ 代码编写完成后必须通过编译测试
+- ✅ 移除所有未使用的 import 语句
+- ✅ 确保无编译错误和警告
+- ✅ 遵循 Kotlin/Java 代码规范
+
+### 4.2 测试验证
+- 功能必须正常运行
+- 通过基本测试用例
+- 无运行时异常
+
+### 4.3 任务完成标准
+- 代码通过编译 ✓
+- 功能测试通过 ✓
+- 代码质量检查通过 ✓
+- **只有以上三项全部完成才算任务真正完成**
+
+### 4.4 版本控制
+- 所有代码修改必须经过用户明确确认
+- 不得自动提交代码到版本控制系统
+- 提交前需检查 git status，确保提交内容正确
+
+## 5. 开发注意事项
+
+- 📝 代码注释遵循 AAF 注释规范（参见 `aaf_note.mdc`）
+- 🎯 Demo 开发在 Template-Empty 项目中进行（参见 `aaf_demo.mdc`）
+- 📚 文档更新遵循文档生成规范（参见 `aaf_doc_generator.mdc`）
+- 🔍 发布前执行发布检查规则（参见 `aaf_release_check.mdc`）
