@@ -20,9 +20,12 @@ CodeBuddyForAAF/
 │   └── aaf_note.mdc                     # 注释规范
 ├── init.sh                              # 项目初始化脚本
 ├── README.md                            # 项目说明文档
+├── AAF-Temp/                            # Demo 开发目录（自动创建，从 Template-Empty clone）
 ├── AndroidAppFactory/                   # AAF 核心框架（自动克隆）
 ├── AndroidAppFactory-Doc/              # AAF 文档（自动克隆）
-└── Template-Empty/                      # Demo 开发目录（自动克隆）
+├── Template-Empty/                      # Sample 示例项目 - 最简示例（自动克隆）
+├── Template_Android/                    # Sample 示例项目 - 基础示例（自动克隆）
+└── Template-AAF/                        # Sample 示例项目 - 完整示例（自动克隆）
 ```
 
 ## 快速开始

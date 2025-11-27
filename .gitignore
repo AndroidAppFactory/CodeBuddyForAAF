@@ -54,6 +54,13 @@ aafRepo
 ######################
 # 自动克隆的AAF项目目录
 ######################
-AndroidAppFactory/
-AndroidAppFactory-Doc/
-Template-Empty/
+AndroidAppFactory
+AndroidAppFactory-Doc
+Template-Empty
+Template_Android
+Template-AAF
+
+######################
+# 临时开发项目（从Template-Empty复制）
+######################
+AAF-Temp

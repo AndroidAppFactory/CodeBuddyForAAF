@@ -13,9 +13,11 @@ provider:
 本规则用于自动升级 Template_Android 和 Template-AAF 示例项目的 AAF 框架版本和编译配置，确保示例项目与 AAF 主项目保持同步。
 
 **项目说明**：
+- **Template-Empty** - 提供给外部开发者的最简示例（空壳项目，快速开始）
 - **Template_Android** - 提供给外部开发者的基础 Android 项目示例
-- **Template-AAF** - 提供给外部开发者的 AAF 框架集成示例
+- **Template-AAF** - 提供给外部开发者的 AAF 框架完整示例
 - **作用** - 展示 AAF 框架的最佳实践和标准用法
+- **注意** - 这些都是外部示例项目，不直接在其中开发
 - **概念区分** - Sample vs Demo 的详细说明参见 `aaf_common.mdc`
 
 ---
@@ -40,13 +42,19 @@ provider:
 - **文件**: `dependencies.gradle`
   - 读取 AAF 版本号：`ext.moduleVersionName`
 
-### 2. Template_Android（更新目标）
+### 2. Template-Empty（更新目标）
 - **文件**: `config.gradle`
   - 更新：`compileSdkVersion`, `buildToolsVersion`, `libMinSdkVersion`, `targetSdkVersion`
 - **文件**: `Application/build.gradle`
   - 更新：所有 `com.bihe0832.android:xxx:x.x.x` 依赖版本
 
-### 3. Template-AAF（更新目标）
+### 3. Template_Android（更新目标）
+- **文件**: `config.gradle`
+  - 更新：`compileSdkVersion`, `buildToolsVersion`, `libMinSdkVersion`, `targetSdkVersion`
+- **文件**: `Application/build.gradle`
+  - 更新：所有 `com.bihe0832.android:xxx:x.x.x` 依赖版本
+
+### 4. Template-AAF（更新目标）
 - **文件**: `config.gradle`
   - 更新：`compileSdkVersion`, `buildToolsVersion`, `libMinSdkVersion`, `targetSdkVersion`
 - **文件**: `dependencies.gradle`
@@ -207,9 +215,11 @@ Template 项目使用 `debug.keystore`，不要修改为 AAF 的签名配置。
 两个示例项目应该分别提交，不要合并提交。
 
 ### 5. 项目升级重点
-- **Template_Android** - 基础示例，展示最简单的 AAF 集成方式
+- **Template-Empty** - 最简示例，空壳项目，帮助开发者快速开始
+- **Template_Android** - 基础示例，展示标准 Android 集成 AAF 的方式
 - **Template-AAF** - 完整示例，展示 AAF 框架的完整功能和最佳实践
 - **共同要求**：保持最新版本，展示最佳实践，供外部开发者参考
+- **重要说明**：这3个都是外部示例项目，不直接在其中开发
 - **概念说明**：Sample vs Demo 的详细区分参见 `aaf_common.mdc` 第 1.2 节
 
 ---

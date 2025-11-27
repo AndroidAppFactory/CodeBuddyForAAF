@@ -14,19 +14,23 @@ NC='\033[0m' # No Color
 
 # 日志函数
 log_info() {
-    printf "${BLUE}[INFO]${NC} %s\n" "$1"
+    printf "${BLUE}[INFO]${NC} %s
+" "$1"
 }
 
 log_success() {
-    printf "${GREEN}[SUCCESS]${NC} %s\n" "$1"
+    printf "${GREEN}[SUCCESS]${NC} %s
+" "$1"
 }
 
 log_warning() {
-    printf "${YELLOW}[WARNING]${NC} %s\n" "$1"
+    printf "${YELLOW}[WARNING]${NC} %s
+" "$1"
 }
 
 log_error() {
-    printf "${RED}[ERROR]${NC} %s\n" "$1"
+    printf "${RED}[ERROR]${NC} %s
+" "$1"
 }
 
 # 获取脚本所在目录
@@ -53,6 +57,12 @@ clone_aaf_project() {
             ;;
         "Template-Empty")
             git_url="https://github.com/AndroidAppFactory/Template-Empty.git"
+            ;;
+        "Template_Android")
+            git_url="https://github.com/AndroidAppFactory/Template_Android.git"
+            ;;
+        "Template-AAF")
+            git_url="https://github.com/AndroidAppFactory/Template-AAF.git"
             ;;
         *)
             log_error "未知的项目名称：$project_name"
@@ -86,7 +96,7 @@ clone_aaf_project() {
 check_aaf_projects() {
     log_info "检查AAF相关项目..."
     
-    local projects=("AndroidAppFactory" "AndroidAppFactory-Doc" "Template-Empty")
+    local projects=("AndroidAppFactory" "AndroidAppFactory-Doc" "Template-Empty" "Template_Android" "Template-AAF")
     local missing_projects=()
     local existing_projects=()
     local parent_projects=()
@@ -172,6 +182,98 @@ check_development_environment() {
     else
         git_version=$(git --version)
         log_success "Git环境：$git_version"
+    fi
+    
+    return 0
+}
+
+# 创建AAF-Temp开发项目
+create_aaf_temp() {
+    log_info "创建AAF-Temp开发项目..."
+    
+    # 检查是否已存在AAF-Temp
+    if [ -d "$PROJECT_DIR/AAF-Temp" ]; then
+        log_warning "AAF-Temp项目已存在，跳过创建"
+        return 0
+    fi
+    
+    # 查找Template-Empty源
+    local template_source=""
+    if [ -d "$PROJECT_DIR/Template-Empty" ]; then
+        template_source="$PROJECT_DIR/Template-Empty"
+    elif [ -d "$PARENT_DIR/Template-Empty" ]; then
+        template_source="$PARENT_DIR/Template-Empty"
+    else
+        log_error "找不到Template-Empty项目，无法创建AAF-Temp"
+        return 1
+    fi
+    
+    log_info "从 $template_source 复制项目..."
+    
+    cd "$PROJECT_DIR"
+    
+    # 使用cp命令复制整个目录
+    if cp -r "$template_source" "AAF-Temp"; then
+        log_success "成功创建AAF-Temp项目"
+        
+        # 移除可能存在的.git目录
+        if [ -d "$PROJECT_DIR/AAF-Temp/.git" ]; then
+            rm -rf "$PROJECT_DIR/AAF-Temp/.git"
+            log_info "已移除AAF-Temp的git支持"
+        fi
+        
+        # 添加到.gitignore（如果存在）
+        if [ -f "$PROJECT_DIR/.gitignore" ]; then
+            if ! grep -q "AAF-Temp" "$PROJECT_DIR/.gitignore"; then
+                echo "AAF-Temp/" >> "$PROJECT_DIR/.gitignore"
+                log_success "已将AAF-Temp添加到.gitignore"
+            fi
+        fi
+        
+        log_success "AAF-Temp开发项目创建完成"
+        log_info "位置：$PROJECT_DIR/AAF-Temp"
+        log_info "说明：这是你的临时开发项目，可以随意修改"
+        
+        return 0
+    else
+        log_error "创建AAF-Temp失败"
+        return 1
+    fi
+}
+
+# 初始化AAF-Temp项目
+init_aaf_temp() {
+    local aaf_temp_dir="$PROJECT_DIR/AAF-Temp"
+    
+    if [ ! -d "$aaf_temp_dir" ]; then
+        log_warning "AAF-Temp项目不存在，请先创建"
+        return 1
+    fi
+    
+    log_info "初始化AAF-Temp项目..."
+    
+    cd "$aaf_temp_dir"
+    
+    # 检查是否有local.properties文件
+    if [ ! -f "local.properties" ]; then
+        log_info "创建local.properties文件..."
+        if [ -n "$ANDROID_HOME" ]; then
+            echo "sdk.dir=$ANDROID_HOME" > local.properties
+            log_success "已创建local.properties文件"
+        elif [ -n "$ANDROID_SDK_ROOT" ]; then
+            echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+            log_success "已创建local.properties文件"
+        else
+            log_warning "无法自动创建local.properties，请手动设置Android SDK路径"
+        fi
+    else
+        log_success "local.properties文件已存在"
+    fi
+    
+    # 检查gradlew权限
+    if [ -f "gradlew" ]; then
+        chmod +x gradlew
+        log_success "已设置gradlew可执行权限"
     fi
     
     return 0
@@ -269,22 +371,17 @@ init_android_app_factory() {
 verify_project_setup() {
     log_info "验证项目配置..."
     
-    # 验证Template-Empty项目
-    local template_dir=""
-    if [ -d "$PROJECT_DIR/Template-Empty" ]; then
-        template_dir="$PROJECT_DIR/Template-Empty"
-    elif [ -d "$PARENT_DIR/Template-Empty" ]; then
-        template_dir="$PARENT_DIR/Template-Empty"
-    fi
+    # 验证AAF-Temp项目
+    local aaf_temp_dir="$PROJECT_DIR/AAF-Temp"
     
-    if [ -n "$template_dir" ] && [ -d "$template_dir" ]; then
-        cd "$template_dir"
+    if [ -d "$aaf_temp_dir" ]; then
+        cd "$aaf_temp_dir"
         if [ -f "gradlew" ]; then
-            log_info "检查Template-Empty项目依赖..."
+            log_info "检查AAF-Temp项目依赖..."
             if ./gradlew tasks --quiet > /dev/null 2>&1; then
-                log_success "Template-Empty项目配置正常"
+                log_success "AAF-Temp项目配置正常"
             else
-                log_warning "Template-Empty项目配置可能有问题，请检查"
+                log_warning "AAF-Temp项目配置可能有问题，请检查"
             fi
         fi
     fi
@@ -316,9 +413,113 @@ main() {
         exit 1
     fi
     
+    # 创建AAF-Temp开发项目
+create_aaf_temp() {
+    log_info "创建AAF-Temp开发项目..."
+    
+    # 检查是否已存在AAF-Temp
+    if [ -d "$PROJECT_DIR/AAF-Temp" ]; then
+        log_warning "AAF-Temp项目已存在，跳过创建"
+        return 0
+    fi
+    
+    # 查找Template-Empty源
+    local template_source=""
+    if [ -d "$PROJECT_DIR/Template-Empty" ]; then
+        template_source="$PROJECT_DIR/Template-Empty"
+    elif [ -d "$PARENT_DIR/Template-Empty" ]; then
+        template_source="$PARENT_DIR/Template-Empty"
+    else
+        log_error "找不到Template-Empty项目，无法创建AAF-Temp"
+        return 1
+    fi
+    
+    log_info "从 $template_source 复制项目..."
+    
+    cd "$PROJECT_DIR"
+    
+    # 使用cp命令复制整个目录
+    if cp -r "$template_source" "AAF-Temp"; then
+        log_success "成功创建AAF-Temp项目"
+        
+        # 移除可能存在的.git目录
+        if [ -d "$PROJECT_DIR/AAF-Temp/.git" ]; then
+            rm -rf "$PROJECT_DIR/AAF-Temp/.git"
+            log_info "已移除AAF-Temp的git支持"
+        fi
+        
+        # 添加到.gitignore（如果存在）
+        if [ -f "$PROJECT_DIR/.gitignore" ]; then
+            if ! grep -q "AAF-Temp" "$PROJECT_DIR/.gitignore"; then
+                echo "AAF-Temp/" >> "$PROJECT_DIR/.gitignore"
+                log_success "已将AAF-Temp添加到.gitignore"
+            fi
+        fi
+        
+        log_success "AAF-Temp开发项目创建完成"
+        log_info "位置：$PROJECT_DIR/AAF-Temp"
+        log_info "说明：这是你的临时开发项目，可以随意修改"
+        
+        return 0
+    else
+        log_error "创建AAF-Temp失败"
+        return 1
+    fi
+}
+
+# 初始化AAF-Temp项目
+init_aaf_temp() {
+    local aaf_temp_dir="$PROJECT_DIR/AAF-Temp"
+    
+    if [ ! -d "$aaf_temp_dir" ]; then
+        log_warning "AAF-Temp项目不存在，请先创建"
+        return 1
+    fi
+    
+    log_info "初始化AAF-Temp项目..."
+    
+    cd "$aaf_temp_dir"
+    
+    # 检查是否有local.properties文件
+    if [ ! -f "local.properties" ]; then
+        log_info "创建local.properties文件..."
+        if [ -n "$ANDROID_HOME" ]; then
+            echo "sdk.dir=$ANDROID_HOME" > local.properties
+            log_success "已创建local.properties文件"
+        elif [ -n "$ANDROID_SDK_ROOT" ]; then
+            echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+            log_success "已创建local.properties文件"
+        else
+            log_warning "无法自动创建local.properties，请手动设置Android SDK路径"
+        fi
+    else
+        log_success "local.properties文件已存在"
+    fi
+    
+    # 检查gradlew权限
+    if [ -f "gradlew" ]; then
+        chmod +x gradlew
+        log_success "已设置gradlew可执行权限"
+    fi
+    
+    return 0
+}
+
     # 初始化Template-Empty项目
     if ! init_template_empty; then
         log_error "Template-Empty项目初始化失败"
+        exit 1
+    fi
+    
+    # 创建AAF-Temp开发项目
+    if ! create_aaf_temp; then
+        log_error "AAF-Temp项目创建失败"
+        exit 1
+    fi
+    
+    # 初始化AAF-Temp项目
+    if ! init_aaf_temp; then
+        log_error "AAF-Temp项目初始化失败"
         exit 1
     fi
     
@@ -339,8 +540,9 @@ main() {
     log_info "========================================"
     
     log_info "接下来可以："
-    log_info "1. 在Template-Empty项目中开始开发"
+    log_info "1. 在AAF-Temp项目中开始开发（临时开发项目）"
     log_info "2. 参考README.md了解详细开发流程"
+    log_info "3. Template-Empty/Template_Android/Template-AAF 是外部示例项目，不要直接修改"
     
     cd "$SCRIPT_DIR"
 }

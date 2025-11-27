@@ -10,10 +10,16 @@ provider:
 
 ## 1. Demo 开发目录
 
-- **开发目录**: 所有新代码都在 `Template-Empty` 项目的 App 中编写，不要创建新的 Module 或者工程
-- **项目定位**: Template-Empty 是 AAF 框架的演示和测试项目
+- **开发目录**: 所有新代码都在 `AAF-Temp` 项目的 App 中编写，不要创建新的 Module 或者工程
+- **项目来源**: AAF-Temp 是从 Template-Empty clone 而来的临时项目
+- **项目位置**: CodeBuddyForAAF 项目当前目录
+- **初始化方式**: 运行 init.sh 时自动创建
+- **项目定位**: AAF 框架的内部开发、演示和测试项目
 - **开发原则**: 在此项目中实践和验证 AAF 框架的各种功能
-- **重要**: 不要修改非 `Template-Empty` 的内容，如果 `Template-Empty` 编译存在问题，直接尝试修复，不要尝试其他工程
+- **重要**: 
+  - 不要修改 Template-Empty（那是外部示例项目）
+  - 如果 AAF-Temp 编译存在问题，直接尝试修复
+  - 可以随意修改 AAF-Temp，不影响外部示例项目
 
 ## 2. Demo 实现原则
 
