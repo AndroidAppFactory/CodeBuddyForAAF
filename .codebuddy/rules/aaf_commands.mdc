@@ -2,7 +2,7 @@
 description: AAF 命令索引 - 统一的命令入口，快速执行各种开发任务
 alwaysApply: true
 enabled: true
-updatedAt: 2025-11-27T10:00:00.000Z
+updatedAt: 2025-11-27T12:00:00.000Z
 provider: 
 ---
 
@@ -60,29 +60,41 @@ git commit -m "feat(rules): 添加 Git 提交规范
 
 **触发关键词**：
 - "优化规则"
+- "重构规则"
+- "整理规则文件"
 
-**自动执行流程**：
-1. 读取所有 `.codebuddy/rules/` 目录下的规则文件
-2. 分析每个规则文件的内容和结构
-3. 识别冗余、重复、过度详细的部分
-4. 统一格式、时间戳、描述风格
-5. 精简内容，保留核心要点
-6. 优化 README.md，添加所有规则文件介绍和命令使用说明
-7. 提供优化建议并执行优化
+**执行规则**: `aaf_cmd_rules_optimization.mdc`
 
-**优化原则**：
-- **简洁性**: 去除冗余说明和重复内容
-- **一致性**: 统一格式、风格、时间戳
-- **实用性**: 保留核心规则，移除过度详细的示例
-- **清晰性**: 提升可读性和可维护性
+**功能说明**：
+- 优化和重构所有规则文件
+- 统一格式、时间戳、描述风格
+- 精简内容，提升可维护性
+- 评估目录结构，提供分层建议
+- 更新 README.md
 
-**优化重点**：
-- 统一所有规则文件的 `updatedAt` 时间戳
-- 精简过长的示例说明
-- 移除重复的规则描述
-- 优化文档结构和层级
-- 减少交叉引用的复杂度
-- 更新 README.md，确保包含最新的规则文件说明和命令列表
+---
+
+### 3. 升级示例项目 AAF 版本
+
+**触发关键词**：
+- "升级sample"
+- "升级Sample"
+- "更新sample版本"
+- "同步sample配置"
+- "升级示例项目"
+- "更新Template"
+
+**执行规则**: `aaf_cmd_sample_upgrade.mdc`
+
+**功能说明**：
+- 自动升级 Template_Android（基础示例）和 Template-AAF（框架集成示例）的 AAF 框架版本
+- 同步编译配置（SDK 版本、minSdk、targetSdk 等）到示例项目
+- 更新所有 AAF 依赖到最新版本
+- 生成变更报告和提交建议
+
+**项目定位**：
+- Template_Android - 提供给外部开发者的基础示例
+- Template-AAF - 提供给外部开发者的完整框架示例
 
 ---
 
@@ -92,9 +104,9 @@ git commit -m "feat(rules): 添加 Git 提交规范
 
 | 命令关键词 | 执行规则 | 功能说明 |
 |-----------|---------|----------|
-| `更新文档` `同步文档` `文档同步` | `aaf_doc_management.mdc` | 检测代码变更并同步更新对应文档 |
-| `生成文档` `整理文档` | `aaf_doc_management.mdc` | 为指定模块生成或整理文档 |
-| `文档巡检` `巡检` | `aaf_doc_inspection.mdc` | 检查框架模块与文档的对应关系 |
+| `更新文档` `同步文档` `文档同步` | `aaf_cmd_doc_management.mdc` | 检测代码变更并同步更新对应文档 |
+| `生成文档` `整理文档` | `aaf_cmd_doc_management.mdc` | 为指定模块生成或整理文档 |
+| `文档巡检` `巡检` | `aaf_cmd_doc_inspection.mdc` | 检查框架模块与文档的对应关系 |
 
 **使用示例：**
 ```
@@ -114,10 +126,10 @@ git commit -m "feat(rules): 添加 Git 提交规范
 
 | 命令关键词 | 执行规则 | 功能说明 |
 |-----------|---------|----------|
-| `发布检查` `准备发布` `发布前` `release` | `aaf_release_check.mdc` | 执行发布前的完整检查流程 |
-| `编译检查` | `aaf_release_check.mdc` | 仅执行编译检查部分 |
-| `版本检查` | `aaf_release_check.mdc` | 检查版本号是否已更新 |
-| `模块检查` | `aaf_release_check.mdc` | 检查变更模块是否都在发布列表中 |
+| `发布检查` `准备发布` `发布前` `release` | `aaf_cmd_release_check.mdc` | 执行发布前的完整检查流程 |
+| `编译检查` | `aaf_cmd_release_check.mdc` | 仅执行编译检查部分 |
+| `版本检查` | `aaf_cmd_release_check.mdc` | 检查版本号是否已更新 |
+| `模块检查` | `aaf_cmd_release_check.mdc` | 检查变更模块是否都在发布列表中 |
 
 **使用示例：**
 ```

@@ -1,0 +1,237 @@
+---
+description: AAF Sample 项目升级规则 - 自动同步示例项目的 AAF 版本和编译配置
+alwaysApply: false
+enabled: true
+updatedAt: 2025-11-27T12:00:00.000Z
+provider: 
+---
+
+# AAF Sample 项目升级规则
+
+## 📖 规则说明
+
+本规则用于自动升级 Template_Android 和 Template-AAF 示例项目的 AAF 框架版本和编译配置，确保示例项目与 AAF 主项目保持同步。
+
+**项目说明**：
+- **Template_Android** - 提供给外部开发者的基础 Android 项目示例
+- **Template-AAF** - 提供给外部开发者的 AAF 框架集成示例
+- **作用** - 展示 AAF 框架的最佳实践和标准用法
+- **概念区分** - Sample vs Demo 的详细说明参见 `aaf_common.mdc`
+
+---
+
+## 🎯 触发条件
+
+当用户说出以下关键词时，自动执行本规则：
+- "升级sample"
+- "升级Sample"
+- "更新sample版本"
+- "同步sample配置"
+- "升级示例项目"
+- "更新Template"
+
+---
+
+## 📂 涉及项目和文件
+
+### 1. AndroidAppFactory（配置源）
+- **文件**: `config.gradle`
+  - 读取 SDK 版本配置：`compileSdkVersion`, `buildToolsVersion`, `libMinSdkVersion`, `targetSdkVersion`
+- **文件**: `dependencies.gradle`
+  - 读取 AAF 版本号：`ext.moduleVersionName`
+
+### 2. Template_Android（更新目标）
+- **文件**: `config.gradle`
+  - 更新：`compileSdkVersion`, `buildToolsVersion`, `libMinSdkVersion`, `targetSdkVersion`
+- **文件**: `Application/build.gradle`
+  - 更新：所有 `com.bihe0832.android:xxx:x.x.x` 依赖版本
+
+### 3. Template-AAF（更新目标）
+- **文件**: `config.gradle`
+  - 更新：`compileSdkVersion`, `buildToolsVersion`, `libMinSdkVersion`, `targetSdkVersion`
+- **文件**: `dependencies.gradle`
+  - 更新：所有 `com.bihe0832.android:xxx:x.x.x` 依赖版本
+
+---
+
+## ⚙️ 执行流程
+
+### 步骤 1: 读取 AAF 最新配置
+
+```bash
+# 1.1 读取 AAF 版本号
+cd /Volumes/Document/Documents/github/AndroidAppFactory
+AAF_VERSION=$(grep "ext.moduleVersionName" dependencies.gradle | grep -o '".*"' | tr -d '"')
+
+# 1.2 读取 SDK 配置
+COMPILE_SDK=$(grep "compileSdkVersion = " config.gradle | grep -o '[0-9]*')
+BUILD_TOOLS=$(grep "buildToolsVersion = " config.gradle | grep -o '".*"' | tr -d '"')
+LIB_MIN_SDK=$(grep "libMinSdkVersion = " config.gradle | grep -o '[0-9]*')
+TARGET_SDK=$(grep "targetSdkVersion = " config.gradle | grep -o '[0-9]*')
+```
+
+### 步骤 2: 更新 Template_Android
+
+```bash
+cd /Volumes/Document/Documents/github/Template_Android
+
+# 2.1 更新 config.gradle
+# - compileSdkVersion
+# - buildToolsVersion
+# - libMinSdkVersion
+# - targetSdkVersion
+
+# 2.2 更新 Application/build.gradle
+# - com.bihe0832.android:common-wrapper:x.x.x → AAF_VERSION
+# - com.bihe0832.android:lib-router-compiler:x.x.x → AAF_VERSION
+```
+
+### 步骤 3: 更新 Template-AAF
+
+```bash
+cd /Volumes/Document/Documents/github/Template-AAF
+
+# 3.1 更新 config.gradle
+# - compileSdkVersion
+# - buildToolsVersion
+# - libMinSdkVersion
+# - targetSdkVersion
+
+# 3.2 更新 dependencies.gradle
+# - 所有 com.bihe0832.android:xxx:x.x.x → AAF_VERSION
+```
+
+### 步骤 4: 生成变更报告
+
+输出格式：
+```
+✅ AAF 最新配置
+   版本号: 8.0.0
+   compileSdkVersion: 34
+   buildToolsVersion: 34.0.0
+   libMinSdkVersion: 23
+   targetSdkVersion: 31
+
+📦 Template_Android（基础示例）变更
+   config.gradle:
+   - compileSdkVersion: 32 → 34
+   - buildToolsVersion: 32.0.0 → 34.0.0
+   - libMinSdkVersion: 16 → 23
+   - targetSdkVersion: 30 → 31
+   
+   Application/build.gradle:
+   - common-wrapper: 6.21.9 → 8.0.0
+   - lib-router-compiler: 5.1.7 → 8.0.0
+
+📦 Template-AAF（框架集成示例）变更
+   config.gradle:
+   - compileSdkVersion: 32 → 34
+   - buildToolsVersion: 32.0.0 → 34.0.0
+   - libMinSdkVersion: 16 → 23
+   - targetSdkVersion: 30 → 31
+   
+   dependencies.gradle:
+   - common-wrapper: 6.21.9 → 8.0.0
+   - common-debug: 6.21.12 → 8.0.0
+   - lib-router-compiler: 5.1.7 → 8.0.0
+```
+
+### 步骤 5: 提供提交建议
+
+```bash
+# Template_Android 提交
+cd /Volumes/Document/Documents/github/Template_Android
+git add config.gradle Application/build.gradle
+git commit -m "chore(sample): 升级 AAF 到 8.0.0 并同步编译配置
+
+- 升级 AAF 依赖到 8.0.0
+- 同步编译配置（SDK 34, minSdk 23, targetSdk 31）
+"
+
+# Template-AAF 提交
+cd /Volumes/Document/Documents/github/Template-AAF
+git add config.gradle dependencies.gradle
+git commit -m "chore(sample): 升级 AAF 到 8.0.0 并同步编译配置
+
+- 升级 AAF 依赖到 8.0.0
+- 同步编译配置（SDK 34, minSdk 23, targetSdk 31）
+"
+```
+
+---
+
+## 🔍 需要同步的配置项
+
+### config.gradle 配置项
+
+| 配置项 | 说明 | AAF 当前值 |
+|--------|------|-----------|
+| `compileSdkVersion` | Android 编译 SDK 版本 | 34 |
+| `buildToolsVersion` | Android 编译工具版本 | 34.0.0 |
+| `libMinSdkVersion` | Lib 最低适配 Android 版本 | 23 |
+| `targetSdkVersion` | Android 最佳适配版本 | 31 |
+
+**注意**：以下配置不需要同步（保持 Template 项目原有值）
+- `versionCode` - Demo 项目版本号
+- `versionName` - Demo 项目版本名
+- `signingConfigs` - 签名配置（使用 debug.keystore）
+- `kotlin_version` - Kotlin 版本（可选同步）
+
+### dependencies 依赖版本
+
+所有 `com.bihe0832.android:xxx` 开头的依赖都需要更新到 AAF 最新版本。
+
+**常见依赖**：
+- `com.bihe0832.android:common-wrapper`
+- `com.bihe0832.android:common-debug`
+- `com.bihe0832.android:lib-router-compiler`
+- 其他所有 AAF 框架依赖
+
+---
+
+## ⚠️ 注意事项
+
+### 1. 签名配置保持不变
+Template 项目使用 `debug.keystore`，不要修改为 AAF 的签名配置。
+
+### 2. 版本号不同步
+示例项目的 `versionCode` 和 `versionName` 保持独立，不随 AAF 版本更新。
+
+### 3. 检查兼容性
+升级 SDK 版本后，可能需要检查：
+- Gradle 版本兼容性
+- Kotlin 版本兼容性
+- 依赖库的兼容性
+
+### 4. 分别提交
+两个示例项目应该分别提交，不要合并提交。
+
+### 5. 项目升级重点
+- **Template_Android** - 基础示例，展示最简单的 AAF 集成方式
+- **Template-AAF** - 完整示例，展示 AAF 框架的完整功能和最佳实践
+- **共同要求**：保持最新版本，展示最佳实践，供外部开发者参考
+- **概念说明**：Sample vs Demo 的详细区分参见 `aaf_common.mdc` 第 1.2 节
+
+---
+
+## 📝 执行清单
+
+执行升级时，确认以下步骤：
+
+- [ ] 读取 AAF 最新版本号
+- [ ] 读取 AAF SDK 配置
+- [ ] 更新 Template_Android/config.gradle
+- [ ] 更新 Template_Android/Application/build.gradle
+- [ ] 更新 Template-AAF/config.gradle
+- [ ] 更新 Template-AAF/dependencies.gradle
+- [ ] 生成变更报告
+- [ ] 提供提交建议
+- [ ] 确认所有变更无误
+
+---
+
+## 🔗 相关规则
+
+- `aaf_commands.mdc` - 命令索引
+- `aaf_common.mdc` - AAF 框架通用规范
+- `aaf_dependency.mdc` - 依赖管理规范

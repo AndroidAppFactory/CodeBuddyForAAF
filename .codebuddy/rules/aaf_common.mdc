@@ -2,7 +2,7 @@
 description: AAF 框架通用开发规范 - AndroidAppFactory 项目开发标准和流程
 alwaysApply: true
 enabled: true
-updatedAt: 2025-11-27T10:00:00.000Z
+updatedAt: 2025-11-27T12:00:00.000Z
 provider: 
 ---
 
@@ -10,7 +10,35 @@ provider:
 
 ## 1. 术语说明
 
+### 1.1 基本术语
+
 - **AAF**: AndroidAPPFactory 的简称，在所有对话中统一使用此缩写
+
+### 1.2 项目类型区分
+
+#### Sample（示例项目）
+- **定位**: 提供给外部开发者的标准示例
+- **项目**: Template_Android（基础示例）、Template-AAF（完整示例）
+- **特点**:
+  - 展示 AAF 框架的最佳实践
+  - 保持最新版本同步
+  - 供外部开发者参考学习
+  - 代码质量高，注释完善
+- **用途**: 帮助外部开发者快速上手 AAF 框架
+
+#### Demo（演示项目）
+- **定位**: 内部临时开发和验证
+- **项目**: Template-Empty 等内部开发项目
+- **特点**:
+  - 快速验证功能
+  - 原型开发
+  - 内部测试
+  - 不对外发布
+- **用途**: AAF 框架开发过程中的功能验证和临时测试
+
+#### 重要区别
+- ✅ **Sample** = 外部示例 = 提供给开发者 = 需要保持高质量和最新版本
+- ✅ **Demo** = 内部开发 = 临时验证功能 = 可以随意修改测试
 
 ## 2. 项目结构
 
@@ -21,9 +49,9 @@ provider:
 | **CodeBuddyForAAF** | 规则和配置管理仓库 | 当前工作区根目录 |
 | **AndroidAppFactory** | AAF 框架核心代码库 | 同级或父目录同级 |
 | **AndroidAppFactory-Doc** | 框架文档和 API 说明 | 同级或父目录同级 |
-| **Template-Empty** | Demo 开发目录 | 同级或父目录同级 |
-| **Template_Android** | Android 模板项目 | 同级或父目录同级 |
-| **Template-AAF** | AAF 模板项目 | 同级或父目录同级 |
+| **Template-Empty** | Demo 开发目录（内部临时开发） | 同级或父目录同级 |
+| **Template_Android** | Sample 示例项目（外部基础示例） | 同级或父目录同级 |
+| **Template-AAF** | Sample 示例项目（外部完整示例） | 同级或父目录同级 |
 
 ### 2.2 项目定位策略
 

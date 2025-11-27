@@ -2,7 +2,7 @@
 description: AAF 发布检查规则 - 发布前自动检查编译状态和版本号更新
 alwaysApply: false
 enabled: true
-updatedAt: 2025-11-27T10:00:00.000Z
+updatedAt: 2025-11-27T12:00:00.000Z
 provider: 
 ---
 

@@ -2,7 +2,7 @@
 description: AAF 文档巡检规则 - 检查框架模块与文档的对应关系
 alwaysApply: false
 enabled: true
-updatedAt: 2025-11-27T10:00:00.000Z
+updatedAt: 2025-11-27T12:00:00.000Z
 provider: 
 ---
 
