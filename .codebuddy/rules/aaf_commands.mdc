@@ -77,9 +77,9 @@ git commit -m "feat(rules): 添加 Git 提交规范
 ### 3. 升级示例项目 AAF 版本
 
 **触发关键词**：
-- "升级sample"
-- "升级Sample"
-- "更新sample版本"
+- "升级sample" / "升级Sample"
+- "升级demo" / "升级Demo"
+- "更新sample版本" / "更新demo版本"
 - "同步sample配置"
 - "升级示例项目"
 - "更新Template"
@@ -87,14 +87,21 @@ git commit -m "feat(rules): 添加 Git 提交规范
 **执行规则**: `aaf_cmd_sample_upgrade.mdc`
 
 **功能说明**：
-- 自动升级 Template_Android（基础示例）和 Template-AAF（框架集成示例）的 AAF 框架版本
-- 同步编译配置（SDK 版本、minSdk、targetSdk 等）到示例项目
+- 自动升级 3 个 Sample 示例项目的 AAF 框架版本和编译配置
+  - Template-Empty（最简示例）
+  - Template_Android（基础示例）
+  - Template-AAF（完整示例）
+- 同步编译配置（SDK 版本、minSdk、targetSdk 等）
 - 更新所有 AAF 依赖到最新版本
+- **验证所有项目编译通过**（必须）
 - 生成变更报告和提交建议
 
 **项目定位**：
+- Template-Empty - 提供给外部开发者的最简示例
 - Template_Android - 提供给外部开发者的基础示例
 - Template-AAF - 提供给外部开发者的完整框架示例
+
+**重要说明**：无论说"升级demo"还是"升级sample"，都是升级这 3 个外部示例项目。
 
 ---
 
