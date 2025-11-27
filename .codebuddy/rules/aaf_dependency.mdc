@@ -1,0 +1,198 @@
+---
+description: AAF 依赖管理规范 - 集中式依赖配置管理规则
+alwaysApply: true
+enabled: true
+updatedAt: 2025-11-27T10:00:00.000Z
+provider: 
+---
+
+# AAF 依赖管理规范
+
+## 1. 依赖管理原则
+
+**核心原则：所有模块依赖统一在根目录的 dependencies 配置文件中管理，不在模块自己的 build.gradle 中添加依赖。**
+
+**⚠️ 特别说明：本规范仅适用于 AAF 框架项目（AndroidAppFactory）。Template-Android 和 Template-Empty 项目使用标准的 Android 依赖管理方式，在各模块的 build.gradle 中直接声明依赖。**
+
+## 2. 依赖配置文件结构
+
+AAF 项目的依赖配置采用分类管理方式，所有依赖配置文件位于项目根目录：
+
+| 配置文件 | 说明 |
+|---------|------|
+| `dependencies.gradle` | 主配置文件，引入所有其他依赖配置 |
+| `dependencies_lib.gradle` | Lib 模块依赖配置 |
+| `dependencies_common.gradle` | 公共组件依赖配置 |
+| `dependencies_lock_widget.gradle` | 锁屏组件依赖配置 |
+| `dependencies_tbs.gradle` | TBS 相关依赖配置 |
+| `dependencies_services.gradle` | 服务组件依赖配置 |
+| `dependencies_asr.gradle` | ASR 相关依赖配置 |
+| `dependencies_deprecated.gradle` | 已废弃模块依赖配置 |
+| `dependencies_aaf_config.gradle` | AAF 配置相关依赖 |
+
+## 3. 依赖配置格式
+
+每个模块的依赖配置采用以下格式：
+
+```gradle
+"ModuleName" : [
+    "version"            : "版本号",
+    "artifactId"         : "maven-artifact-id",
+    "apidependenciesList": [
+        "依赖模块1",
+        "依赖模块2",
+        project.xxx.library_name,
+    ]
+]
+```
+
+### 配置项说明
+
+- **version**: 模块版本号
+- **artifactId**: Maven 发布时的 artifact ID
+- **apidependenciesList**: 该模块依赖的其他模块列表
+  - 可以是 AAF 内部模块名（如 `"LibFile"`, `"LibThread"`）
+  - 可以是外部库引用（如 `project.okhttp.okhttp`）
+
+## 4. 添加依赖的正确方式
+
+### ❌ 错误方式
+
+**不要在模块的 build.gradle 中添加依赖：**
+
+```gradle
+// LibDownload/build.gradle - 错误示例
+dependencies {
+    api project(':LibOkhttpWrapper')  // ❌ 不要这样做
+    implementation 'com.squareup.okhttp3:okhttp:4.x.x'  // ❌ 不要这样做
+}
+```
+
+### ✅ 正确方式
+
+**在对应的 dependencies_*.gradle 文件中配置：**
+
+```gradle
+// dependencies_lib.gradle - 正确示例
+"LibDownload" : [
+    "version"            : "7.2.7",
+    "artifactId"         : "lib-download",
+    "apidependenciesList": [
+        "LibDialog", "LibFile", "LibRequest", "LibThread", 
+        "LibSqlite", "LibAPK", "LibNotification", "LibInstall",
+        "LibHttpAdvanced", "LibOkhttpWrapper",  // ✓ 在这里添加
+        project.okhttp.okhttp,
+    ]
+],
+```
+
+## 5. 选择正确的配置文件
+
+根据模块类型选择合适的配置文件：
+
+| 模块类型 | 配置文件 | 示例模块 |
+|---------|---------|---------|
+| Lib 基础库 | `dependencies_lib.gradle` | LibDownload, LibNetwork, LibFile 等 |
+| Common 公共组件 | `dependencies_common.gradle` | CommonWrapper, Framework 等 |
+| 锁屏相关 | `dependencies_lock_widget.gradle` | 锁屏组件 |
+| TBS 相关 | `dependencies_tbs.gradle` | TBS Webview |
+| 服务组件 | `dependencies_services.gradle` | 各类服务 |
+| ASR 相关 | `dependencies_asr.gradle` | 语音识别 |
+| 已废弃模块 | `dependencies_deprecated.gradle` | 不再维护的模块 |
+
+## 6. 依赖管理注意事项
+
+### 6.1 避免循环依赖
+- 确保依赖关系是单向的
+- 底层模块不应该依赖上层模块
+
+### 6.2 最小化依赖
+- 只添加必要的依赖
+- 避免传递过多不需要的依赖
+
+### 6.3 版本自动管理
+- AAF 模块版本号由编译脚本自动更新，不需要手动维护
+- 外部库版本在 `config.gradle` 中统一定义
+- 使用 `project.xxx.library` 引用外部库，确保版本一致
+
+### 6.4 依赖类型选择
+- 通常使用 `apidependenciesList` 配置 API 依赖
+- 如需特殊依赖类型，使用 `specialdependenciesList`
+
+## 7. 示例：为 LibDownload 添加 LibOkhttpWrapper 依赖
+
+### 步骤 1：确定配置文件
+LibDownload 是 Lib 基础库，应在 `dependencies_lib.gradle` 中配置
+
+### 步骤 2：找到 LibDownload 配置块
+```gradle
+"LibDownload" : [
+    "version"            : "7.2.7",
+    "artifactId"         : "lib-download",
+    "apidependenciesList": [
+        "LibDialog", "LibFile", "LibRequest", "LibThread", "LibSqlite",
+        "LibAPK", "LibNotification", "LibInstall", "LibHttpAdvanced",
+        project.okhttp.okhttp,
+    ]
+],
+```
+
+### 步骤 3：在 apidependenciesList 中添加依赖
+```gradle
+"LibDownload" : [
+    "version"            : "7.2.7",
+    "artifactId"         : "lib-download",
+    "apidependenciesList": [
+        "LibDialog", "LibFile", "LibRequest", "LibThread", "LibSqlite",
+        "LibAPK", "LibNotification", "LibInstall", "LibHttpAdvanced",
+        "LibOkhttpWrapper",  // ← 新增依赖
+        project.okhttp.okhttp,
+    ]
+],
+```
+
+### 步骤 4：同步项目
+执行 Gradle Sync 使依赖生效
+
+## 8. 验证依赖配置
+
+### 编译验证
+```bash
+./gradlew :ModuleName:compileDebugKotlin
+```
+
+### 检查依赖树
+```bash
+./gradlew :ModuleName:dependencies
+```
+
+## 9. 常见错误
+
+### 错误 1：在模块 build.gradle 中添加依赖
+**问题**: 破坏了统一管理原则
+**解决**: 移除模块 build.gradle 中的 dependencies 块，在根目录配置文件中添加
+
+### 错误 2：找不到依赖
+**问题**: Unresolved reference 错误
+**解决**: 检查依赖是否已添加到对应的 dependencies_*.gradle 文件中
+
+### 错误 3：选错配置文件
+**问题**: 依赖配置不生效
+**解决**: 确认模块类型，选择正确的配置文件
+
+## 10. 总结
+
+✅ **记住一个原则**：所有依赖配置在根目录 `dependencies_*.gradle` 文件中管理
+
+✅ **两个步骤**：
+1. 找到对应的配置文件（根据模块类型）
+2. 在 `apidependenciesList` 中添加依赖模块名
+
+✅ **三个禁止**：
+1. 禁止在模块 build.gradle 中添加 dependencies 块
+2. 禁止直接使用 implementation/api 声明依赖
+3. 禁止绕过统一配置文件自行添加依赖
+
+---
+
+**注意**: Template-Android 和 Template-Empty 项目不受此规范约束，使用标准 Android 依赖管理方式

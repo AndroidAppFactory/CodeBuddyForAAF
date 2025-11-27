@@ -1,12 +1,12 @@
 ---
-description: AAF (AndroidAPPFactory) 框架通用注释规范 - 规范代码注释格式和文档编写标准
+description: AAF 注释规范 - 规范代码注释格式和文档编写标准
 alwaysApply: true
 enabled: true
-updatedAt: 2025-01-07T16:30:00.000Z
+updatedAt: 2025-11-27T10:00:00.000Z
 provider: 
 ---
 
-## AAF 框架通用注释规范
+# AAF 框架注释规范
 
 ### 📋 注释基本原则
 
