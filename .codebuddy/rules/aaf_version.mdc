@@ -1,5 +1,5 @@
 ---
-description: 
+description: AAF 模块版本查找规则 - 在 dependencies 配置中查找模块版本
 alwaysApply: false
 enabled: true
 updatedAt: 2025-11-28T08:00:00.000Z

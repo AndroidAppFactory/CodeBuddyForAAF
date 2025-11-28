@@ -1,5 +1,5 @@
 ---
-description: AAF 发布检查规则 - 发布前自动检查编译状态和版本号更新
+description: AAF 发布检查规则 - 发布前自动检查编译状态、版本号更新和文档同步
 alwaysApply: false
 enabled: true
 updatedAt: 2025-11-28T08:00:00.000Z
@@ -38,7 +38,6 @@ cd ../AndroidAppFactory
 **说明：**
 - AndroidAppFactory 是框架核心代码库
 - 发布前必须确保框架本身编译通过
-- Template-Empty 是 Demo 项目，不需要在发布时检查
 
 ### 2. 模块版本号检查（重要）
 
@@ -71,7 +70,48 @@ grep "moduleVersionName" dependencies.gradle
 - 修订号：Bug 修复或小改动
 - **每次发布必须递增**
 
-### 3. 修改模块完整性检查（重要）
+### 3. 文档同步检查
+
+检查修改的模块是否有对应的文档更新，确保代码和文档保持同步。
+
+#### 3.1 检查方法
+
+```bash
+# 获取从上次发布到现在的变更模块
+cd ../AndroidAppFactory
+LATEST_TAG=$(git tag -l "Tag_AAF_*" | sort -V | tail -1)
+CHANGED_MODULES=$(git diff --name-only $LATEST_TAG HEAD | cut -d'/' -f1 | sort -u | grep -v "^APP" | grep -v "^Base")
+
+# 检查对应的文档是否有更新
+cd ../AndroidAppFactory-Doc
+for module in $CHANGED_MODULES; do
+    # 查找对应的文档文件
+    DOC_FILE=$(find . -name "*.md" -path "*${module:3}*" | head -1)
+    if [ -n "$DOC_FILE" ]; then
+        # 检查文档是否在变更范围内
+        DOC_UPDATED=$(git diff --name-only $LATEST_TAG HEAD | grep "$DOC_FILE")
+        if [ -z "$DOC_UPDATED" ]; then
+            echo "⚠️  $module 有代码变更，但文档未更新: $DOC_FILE"
+        fi
+    else
+        echo "⚠️  $module 有代码变更，但找不到对应文档"
+    fi
+done
+```
+
+#### 3.2 检查要点
+
+- ✅ 代码变更的模块是否有对应的文档更新
+- ⚠️ 有代码变更但文档未更新的模块
+- ❌ 有代码变更但找不到对应文档的模块
+
+#### 3.3 处理策略
+
+- **文档未更新**：提醒用户运行"更新文档"命令
+- **找不到文档**：提醒用户运行"生成文档"命令
+- **无代码变更**：跳过文档检查
+
+### 4. 修改模块完整性检查（重要）
 
 检查从上次 Tag 到现在，所有修改过的模块是否都包含在 ext.developModule 中。
 
@@ -92,7 +132,7 @@ git diff --name-only $LATEST_TAG HEAD | cut -d'/' -f1 | sort -u | grep -v "^APP"
 - 询问用户是否需要添加到 developModule
 - 自动排除 APP 和 Base 开头的模块
 
-### 4. 版本 Tag 检查
+### 5. 版本 Tag 检查
 
 检查是否存在对应版本的 Git Tag。
 
@@ -108,7 +148,7 @@ git tag -l "Tag_AAF_$MODULE_VERSION"
 - Tag 不存在 → 正常，待发布后创建
 - Tag 已存在 → ⚠️ 警告，版本号可能未更新
 
-### 5. 代码质量检查（可选）
+### 6. 代码质量检查（可选）
 
 ```bash
 cd ../AndroidAppFactory
@@ -133,7 +173,34 @@ LATEST_VERSION=$(echo $LATEST_TAG | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+')
 
 **对比规则：** 当前版本必须大于上次版本
 
-### Step 2: 修改模块完整性检查
+### Step 2: 文档同步检查
+
+```bash
+# 获取从上次发布到现在的变更模块
+cd ../AndroidAppFactory
+LATEST_TAG=$(git tag -l "Tag_AAF_*" | sort -V | tail -1)
+CHANGED_MODULES=$(git diff --name-only $LATEST_TAG HEAD | cut -d'/' -f1 | sort -u | grep -v "^APP" | grep -v "^Base")
+
+# 检查对应的文档是否有更新
+cd ../AndroidAppFactory-Doc
+for module in $CHANGED_MODULES; do
+    # 查找对应的文档文件
+    DOC_FILE=$(find . -name "*.md" -path "*${module:3}*" | head -1)
+    if [ -n "$DOC_FILE" ]; then
+        # 检查文档是否在变更范围内
+        DOC_UPDATED=$(git diff --name-only $LATEST_TAG HEAD | grep "$DOC_FILE")
+        if [ -z "$DOC_UPDATED" ]; then
+            echo "⚠️  $module 有代码变更，但文档未更新: $DOC_FILE"
+        fi
+    else
+        echo "⚠️  $module 有代码变更，但找不到对应文档"
+    fi
+done
+```
+
+**期望结果：** 所有代码变更的模块都有对应的文档更新
+
+### Step 3: 修改模块完整性检查
 
 ```bash
 LATEST_TAG=$(git tag -l "Tag_AAF_*" | sort -V | tail -1)
@@ -143,7 +210,7 @@ DEVELOP_MODULES=$(grep "developModule" dependencies.gradle | grep -o "'[^']*'" |
 
 **检查：** 确保所有 CHANGED_MODULES 都在 DEVELOP_MODULES 中
 
-### Step 3: 编译检查
+### Step 4: 编译检查
 
 ```bash
 cd ../AndroidAppFactory
@@ -152,14 +219,14 @@ cd ../AndroidAppFactory
 
 **期望结果：** `BUILD SUCCESSFUL`
 
-### Step 4: Git 状态检查
+### Step 5: Git 状态检查
 
 ```bash
 git status --short
 git branch --show-current
 ```
 
-### Step 5: 生成检查报告并显示发布命令
+### Step 6: 生成检查报告并显示发布命令
 
 ```bash
 ./gradlew showPublishCommand
@@ -180,6 +247,12 @@ AAF 发布前检查报告
    上次版本：7.2.6 (Tag_AAF_7.2.6)
    状态：已提升 ✓
 
+✅ 文档同步检查
+   代码变更模块：CommonMedia, LibImage, LibUtils
+   文档已同步模块：CommonMedia, LibImage
+   文档未同步模块：LibUtils
+   状态：部分模块需要更新文档 ⚠️
+
 ✅ 修改模块完整性检查
    修改的模块：CommonMedia, LibImage, LibUtils
    已排除模块：APPTest (APP), BaseDebug (Base)
@@ -197,7 +270,7 @@ AAF 发布前检查报告
    建议：发布前先提交代码
 
 ================================
-检查结果：可以发布 ✓
+检查结果：需要先更新文档 ✓
 ================================
 ```
 
@@ -258,15 +331,7 @@ AAF 发布前检查报告
 
 ## 路径说明
 
-**项目结构：**
-```
-github/
-├── CodeBuddyForAAF/          # 当前工作区（规则所在位置）
-├── AndroidAppFactory/        # AAF 框架核心代码（需要检查编译）
-├── AndroidAppFactory-Doc/    # AAF 文档
-└── Template-Empty/           # Demo 项目（不需要检查）
-```
-
-**路径使用规范：**
-- ✅ 使用相对路径：`../AndroidAppFactory`
-- 说明：相对路径更灵活，适应不同的开发环境
+**发布检查范围：**
+- 检查项目：AndroidAppFactory（AAF 框架核心代码）
+- 检查内容：编译状态、版本号更新、模块完整性
+- 相对路径：`../AndroidAppFactory`
