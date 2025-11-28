@@ -88,18 +88,18 @@ git commit -m "feat(rules): 添加 Git 提交规范
 
 **功能说明**：
 - 自动升级 3 个 Sample 示例项目的 AAF 框架版本和编译配置
-  - Template-Empty（最简示例）
-  - Template_Android（基础示例）
-  - Template-AAF（完整示例）
+  - Template-AAF（完整示例，第一优先级）
+  - Template_Android（基础示例，第二优先级）
+  - Template-Empty（最简示例，第三优先级）
 - 同步编译配置（SDK 版本、minSdk、targetSdk 等）
 - 更新所有 AAF 依赖到最新版本
 - **验证所有项目编译通过**（必须）
 - 生成变更报告和提交建议
 
-**项目定位**：
-- Template-Empty - 提供给外部开发者的最简示例
-- Template_Android - 提供给外部开发者的基础示例
+**项目定位**（按升级顺序）：
 - Template-AAF - 提供给外部开发者的完整框架示例
+- Template_Android - 提供给外部开发者的基础示例
+- Template-Empty - 提供给外部开发者的最简示例
 
 **重要说明**：无论说"升级demo"还是"升级sample"，都是升级这 3 个外部示例项目。
 

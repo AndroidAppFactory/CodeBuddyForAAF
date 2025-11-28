@@ -18,10 +18,10 @@ provider:
 
 #### Sample（示例项目）
 - **定位**: 提供给外部开发者的标准示例
-- **项目**: 
-  - **Template-Empty** - 最简示例（空壳项目，快速开始）
-  - **Template_Android** - 基础示例（标准 Android 集成）
+- **项目**（按复杂度排序）: 
   - **Template-AAF** - 完整示例（AAF 框架完整功能展示）
+  - **Template_Android** - 基础示例（标准 Android 集成）
+  - **Template-Empty** - 最简示例（空壳项目，快速开始）
 - **特点**:
   - 展示 AAF 框架的最佳实践
   - 保持最新版本同步
@@ -44,7 +44,7 @@ provider:
 - **初始化**: 由 init.sh 自动从 Template-Empty clone 并改名
 
 #### 重要区别
-- ✅ **Sample** = 外部示例 = 3个项目 (Template-Empty/Template_Android/Template-AAF) = 需要保持高质量和最新版本
+- ✅ **Sample** = 外部示例 = 3个项目 (Template-AAF/Template_Android/Template-Empty) = 需要保持高质量和最新版本
 - ✅ **Demo** = 内部开发 = AAF-Temp = 临时验证功能 = 可以随意修改测试
 
 ## 2. 项目结构
@@ -103,8 +103,10 @@ provider:
 - **只有以上三项全部完成才算任务真正完成**
 
 ### 4.4 版本控制
-- 遵循 Git 提交规范（详见 `aaf_git.mdc`）
-- **重要**：所有 Git 提交相关的规范和流程请参考 `aaf_git.mdc`
+- 所有代码修改必须经过用户明确确认
+- 不得自动提交代码到版本控制系统
+- 提交前需检查 git status，确保提交内容正确
+- 遵循 Commit Message 规范（参见 `aaf_git.mdc`）
 
 ## 5. 开发注意事项
 

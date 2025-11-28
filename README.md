@@ -48,7 +48,7 @@ CodeBuddyForAAF/
 
 ### 3. 开始开发
 
-在 CodeBuddy 中直接使用自然语言命令进行开发，或进入 `Template-Empty` 手动开发。
+在 CodeBuddy 中直接使用自然语言命令进行开发，或进入 `AAF-Temp` 手动开发。
 
 **参考示例：**
 - `./AndroidAppFactory/BaseDebug` - View 系统示例

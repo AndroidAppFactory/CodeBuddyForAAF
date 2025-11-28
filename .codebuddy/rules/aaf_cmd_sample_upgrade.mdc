@@ -1,5 +1,5 @@
 ---
-description: AAF Sample 项目升级规则 - 自动同步示例项目的 AAF 版本和编译配置
+description: AAF Sample 项目升级规则 - 自动升级示例项目到最新 AAF 版本
 alwaysApply: false
 enabled: true
 updatedAt: 2025-11-28T08:00:00.000Z
@@ -10,15 +10,14 @@ provider:
 
 ## 📖 规则说明
 
-本规则用于自动升级 Template_Android 和 Template-AAF 示例项目的 AAF 框架版本和编译配置，确保示例项目与 AAF 主项目保持同步。
+本规则用于自动升级三个 Sample 示例项目的 AAF 框架版本和编译配置，确保示例项目与 AAF 主项目保持同步。
 
-**项目说明**：
-- **Template-Empty** - 提供给外部开发者的最简示例（空壳项目，快速开始）
-- **Template_Android** - 提供给外部开发者的基础 Android 项目示例
-- **Template-AAF** - 提供给外部开发者的 AAF 框架完整示例
-- **作用** - 展示 AAF 框架的最佳实践和标准用法
-- **注意** - 这些都是外部示例项目，不直接在其中开发
-- **概念区分** - Sample vs Demo 的详细说明参见 `aaf_common.mdc`
+**项目说明**（按升级优先级排序）：
+- **Template-AAF** - 完整示例（第一优先级）
+- **Template_Android** - 基础示例（第二优先级）
+- **Template-Empty** - 最简示例（第三优先级）
+
+**技术栈**：Kotlin + Gradle + Jetpack Compose
 
 ---
 
@@ -32,7 +31,39 @@ provider:
 - "升级示例项目"
 - "更新Template"
 
-**说明**：无论说"升级demo"还是"升级sample"，都是升级外部示例项目（Template-Empty/Template_Android/Template-AAF），因为这些是提供给外部开发者的标准示例。AAF-Temp 是内部临时开发项目，不需要专门升级。
+**说明**：无论说"升级demo"还是"升级sample"，都是升级外部示例项目（Template-AAF/Template_Android/Template-Empty），因为这些是提供给外部开发者的标准示例。AAF-Temp 是内部临时开发项目，不需要专门升级。
+
+---
+
+## 🎯 升级策略
+
+**核心原则：先 Template-AAF，后其余两个**
+
+### 升级顺序
+```
+1. Template-AAF（完整示例）
+   ↓
+   [遇到问题 → 用户协助修复 → 验证通过]
+   ↓
+2. Template_Android（基础示例）
+   ↓
+   [参照 Template-AAF 的修改方案]
+   ↓
+3. Template-Empty（最简示例）
+   ↓
+   [参照 Template-AAF 的修改方案]
+   ↓
+完成
+```
+
+### 升级内容：不只是版本号
+
+**必须检查和同步的内容**：
+1. Compose UI 代码（DebugMainActivity.kt, DebugTempView.kt, DebugRouterView.kt）
+2. 依赖和配置（buildFeatures, composeOptions）
+3. Kotlin 和 Gradle 版本
+4. Manifest 配置（android:exported）
+5. 编译配置
 
 ---
 
@@ -47,25 +78,53 @@ provider:
   - 读取各模块的具体版本：通过 `artifactId` 匹配查找对应的 `version`
   - 示例：`common-debug` → 在 `dependencies_common.gradle` 中查找 `"artifactId" : "common-debug"` 对应的 `"version"`
 
-### 2. Template-Empty（更新目标）
-- **文件**: `config.gradle`
-  - 更新：`compileSdkVersion`, `buildToolsVersion`, `appMinSdkVersion`, `targetSdkVersion`
-- **文件**: `App/build.gradle`
-  - 更新：所有 `com.bihe0832.android:xxx:x.x.x` 依赖版本
-
-### 3. Template_Android（更新目标）
+### 2. Template-AAF（更新目标 - 第一优先级）⭐
 - **文件**: `config.gradle`
   - 更新：`compileSdkVersion`, `buildToolsVersion`, `libMinSdkVersion`, `targetSdkVersion`
+- **文件**: `build.gradle`
+  - 更新：Kotlin 版本、Gradle 版本
+- **文件**: `dependencies.gradle`
+  - 更新：所有 `com.bihe0832.android:xxx:x.x.x` 依赖版本
+- **文件**: `APPTest/build.gradle`
+  - 更新：Compose 配置（buildFeatures, composeOptions）
+  - 更新：所有 AAF 依赖版本
+- **文件**: `APPTest/src/main/java/com/bihe0832/android/test/DebugMainActivity.kt`
+  - 同步：Compose UI 代码
+- **文件**: `APPTest/src/main/java/com/bihe0832/android/test/module/DebugTempView.kt`
+  - 同步：Compose 组件代码
+- **文件**: `APPTest/src/main/java/com/bihe0832/android/test/module/DebugRouterView.kt`
+  - 同步：Compose 组件代码
+- **文件**: `APPTest/src/main/AndroidManifest.xml`
+  - 更新：android:exported 属性
+
+### 3. Template_Android（更新目标 - 第二优先级）
+- **文件**: `config.gradle`
+  - 更新：`compileSdkVersion`, `buildToolsVersion`, `libMinSdkVersion`, `targetSdkVersion`
+- **文件**: `build.gradle`
+  - 更新：Kotlin 版本、Gradle 版本（参照 Template-AAF）
 - **文件**: `Application/build.gradle`
   - 更新：所有 `com.bihe0832.android:xxx:x.x.x` 依赖版本
 - **文件**: `APPTest/build.gradle`
+  - 更新：Compose 配置（参照 Template-AAF）
   - 更新：所有 `com.bihe0832.android:xxx:x.x.x` 依赖版本
+- **文件**: `APPTest/src/main/java/com/bihe0832/android/test/DebugMainActivity.kt`
+  - 同步：Compose UI 代码（参照 Template-AAF）
+- **文件**: `APPTest/src/main/java/com/bihe0832/android/test/module/DebugTempView.kt`
+  - 同步：Compose 组件代码（参照 Template-AAF）
+- **文件**: `APPTest/src/main/java/com/bihe0832/android/test/module/DebugRouterView.kt`
+  - 同步：Compose 组件代码（参照 Template-AAF）
+- **文件**: `APPTest/src/main/AndroidManifest.xml`
+  - 更新：android:exported 属性（参照 Template-AAF）
 
-### 4. Template-AAF（更新目标）
+### 4. Template-Empty（更新目标 - 第三优先级）
 - **文件**: `config.gradle`
-  - 更新：`compileSdkVersion`, `buildToolsVersion`, `libMinSdkVersion`, `targetSdkVersion`
-- **文件**: `dependencies.gradle`
+  - 更新：`compileSdkVersion`, `buildToolsVersion`, `appMinSdkVersion`, `targetSdkVersion`
+- **文件**: `build.gradle`
+  - 更新：Kotlin 版本、Gradle 版本（参照 Template-AAF）
+- **文件**: `App/build.gradle`
   - 更新：所有 `com.bihe0832.android:xxx:x.x.x` 依赖版本
+- **文件**: `App/src/main/AndroidManifest.xml`
+  - 更新：android:exported 属性（参照 Template-AAF）
 
 ---
 
@@ -84,7 +143,11 @@ BUILD_TOOLS=$(grep "buildToolsVersion = " config.gradle | grep -o '".*"' | tr -d
 LIB_MIN_SDK=$(grep "libMinSdkVersion = " config.gradle | grep -o '[0-9]*')
 TARGET_SDK=$(grep "targetSdkVersion = " config.gradle | grep -o '[0-9]*')
 
-# 1.3 读取各模块的具体版本 (通过 artifactId 查找)
+# 1.3 读取 Kotlin 和 Gradle 版本
+KOTLIN_VERSION=$(grep "kotlin_version = " config.gradle | grep -o '".*"' | tr -d '"')
+GRADLE_VERSION=$(grep "classpath 'com.android.tools.build:gradle:" build.gradle | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+')
+
+# 1.4 读取各模块的具体版本 (通过 artifactId 查找)
 # 重要：不是所有模块都发布到 ext.moduleVersionName，需要根据 artifactId 在对应的 dependencies_*.gradle 中查找实际版本
 # 
 # 查找方法：
@@ -113,67 +176,23 @@ TARGET_SDK=$(grep "targetSdkVersion = " config.gradle | grep -o '[0-9]*')
 3. **Maven 验证**：对于关键依赖（如 kapt 处理器），验证 Maven 仓库中是否已发布该版本
 4. **版本回退**：如果 Maven 未发布，使用已发布的最新版本
 
-### 步骤 2: 更新 Template-Empty
-
-```bash
-cd /Volumes/Document/Documents/github/Template-Empty
-
-# 2.1 更新 config.gradle
-# - compileSdkVersion
-# - buildToolsVersion
-# - appMinSdkVersion (对应 AAF 的 libMinSdkVersion)
-# - targetSdkVersion
-
-# 2.2 更新 App/build.gradle
-# 依赖更新方法：
-# - 提取 artifactId (如 common-compose-debug)
-# - 在 AAF/dependencies_common.gradle 中查找对应的 version
-# - 如果未找到，使用 ext.moduleVersionName
-# 
-# 示例依赖及其版本来源：
-# - common-compose-debug → dependencies_common.gradle 的 CommonDebugCompose.version
-# - common-wrapper-min → dependencies_common.gradle 的 CommonWrapperMin.version
-# - lib-router-compiler → dependencies_lib.gradle 的 RouterCompiler.version (注意：可能未发布到最新版)
-
-# 2.3 兼容性修复 (Android 12+ 要求)
-# - 检查 AndroidManifest.xml 中是否需要添加 android:exported
-# - 创建 libs/ 目录 (如果不存在)
-```
-
-### 步骤 3: 更新 Template_Android
-
-```bash
-cd /Volumes/Document/Documents/github/Template_Android
-
-# 3.1 更新 config.gradle
-# - compileSdkVersion
-# - buildToolsVersion
-# - libMinSdkVersion
-# - targetSdkVersion
-
-# 3.2 更新 Application/build.gradle
-# 依赖更新：
-# - common-wrapper → dependencies_common.gradle 的 CommonWrapper.version
-# - lib-router-compiler → dependencies_lib.gradle 的 RouterCompiler.version
-
-# 3.3 更新 APPTest/build.gradle (重要！容易遗漏)
-# 依赖更新：
-# - common-debug → dependencies_common.gradle 的 CommonDebug.version
-# - lib-router-compiler → dependencies_lib.gradle 的 RouterCompiler.version
-```
-
-### 步骤 4: 更新 Template-AAF
+### 步骤 2: 升级 Template-AAF（第一优先级）⭐
 
 ```bash
 cd /Volumes/Document/Documents/github/Template-AAF
 
-# 4.1 更新 config.gradle
-# - compileSdkVersion
-# - buildToolsVersion
-# - libMinSdkVersion
-# - targetSdkVersion
+# 2.1 更新 config.gradle SDK 配置
+# - compileSdkVersion: AAF 的 compileSdkVersion
+# - buildToolsVersion: AAF 的 buildToolsVersion
+# - libMinSdkVersion: AAF 的 libMinSdkVersion
+# - targetSdkVersion: AAF 的 targetSdkVersion
 
-# 4.2 更新 dependencies.gradle
+# 2.2 更新 build.gradle 版本配置
+# - Kotlin 版本：参考 AAF 的 kotlin_version
+# - Gradle 版本：参考 AAF 的 gradle 版本
+# - gradle-wrapper.properties：同步 Gradle 发行版本
+
+# 2.3 更新 dependencies.gradle AAF 依赖版本
 # 两种更新方式：
 # 
 # 方式 1：直接更新 ext.moduleVersionName
@@ -190,21 +209,120 @@ cd /Volumes/Document/Documents/github/Template-AAF
 #           "kapt": ["com.bihe0832.android:lib-router-compiler:x.x.x"]  → 查找 lib-router-compiler 的实际版本
 #       ]
 #   ]
+
+# 2.4 同步 APPTest/build.gradle Compose 配置
+# - 添加 buildFeatures { compose = true }
+# - 添加 composeOptions { kotlinCompilerExtensionVersion = "x.x.x" }
+# - 更新所有 AAF 依赖版本
+
+# 2.5 同步 Compose UI 代码
+# 从 AAF/APPTest 复制以下文件到 Template-AAF/APPTest：
+# - DebugMainActivity.kt - 主 Activity Compose 实现
+# - module/DebugTempView.kt - Compose 临时视图组件
+# - module/DebugRouterView.kt - Compose 路由视图组件
+
+# 2.6 更新 AndroidManifest.xml
+# - 为所有 LAUNCHER Activity 添加 android:exported="true"
+
+# 2.7 编译验证
+./gradlew clean
+./gradlew assembleDebug
+
+# ⚠️ 如果编译失败：记录错误信息，告知用户需要协助修复
 ```
 
-### 步骤 4.5: 版本号查找
+### 步骤 3: 升级 Template_Android（参照 Template-AAF）
 
-**重要**：不是所有 AAF 模块都发布到 `ext.moduleVersionName`，需要根据 `artifactId` 查找实际版本。
+```bash
+cd /Volumes/Document/Documents/github/Template_Android
 
-**详细的版本查找方法请参考**: `aaf_version.mdc` 规则
+# 3.1 应用 Template-AAF 的所有配置变化
+# - config.gradle: 同步 SDK 配置
+# - build.gradle: 同步 Kotlin 和 Gradle 版本
+# - gradle-wrapper.properties: 同步 Gradle 发行版本
 
-**快速参考**：
-- ✅ 优先：从 `dependencies_*.gradle` 中通过 `artifactId` 查找模块实际版本
-- ✅ 备选：使用 `ext.moduleVersionName` 作为默认版本
-- ✅ 验证：检查 Maven 仓库是否已发布该版本
-- ⚠️ 特殊：`lib-router-compiler` 等编译器模块通常独立更新，版本可能不同
+# 3.2 更新 Application/build.gradle
+# 依赖更新：
+# - common-wrapper → dependencies_common.gradle 的 CommonWrapper.version
+# - lib-router-compiler → dependencies_lib.gradle 的 RouterCompiler.version
 
-输出格式：
+# 3.3 更新 APPTest/build.gradle (重要！容易遗漏)
+# - 同步 Template-AAF 的 Compose 配置
+# - 依赖更新：
+#   - common-debug → dependencies_common.gradle 的 CommonDebug.version
+#   - lib-router-compiler → dependencies_lib.gradle 的 RouterCompiler.version
+
+# 3.4 同步 Compose UI 代码
+# 从 Template-AAF/APPTest 复制：
+# - DebugMainActivity.kt
+# - module/DebugTempView.kt
+# - module/DebugRouterView.kt
+
+# 3.5 更新 AndroidManifest.xml
+# - 参照 Template-AAF，添加 android:exported 属性
+
+# 3.6 编译验证
+./gradlew clean
+./gradlew assembleDebug
+```
+
+### 步骤 4: 升级 Template-Empty（参照 Template-AAF）
+
+```bash
+cd /Volumes/Document/Documents/github/Template-Empty
+
+# 4.1 应用 Template-AAF 的配置变化
+# - config.gradle: 同步 SDK 配置
+# - build.gradle: 同步 Kotlin 和 Gradle 版本（如果需要）
+# - gradle-wrapper.properties: 同步 Gradle 发行版本
+
+# 4.2 更新 App/build.gradle
+# 依赖更新方法：
+# - 提取 artifactId (如 common-compose-debug)
+# - 在 AAF/dependencies_common.gradle 中查找对应的 version
+# - 如果未找到，使用 ext.moduleVersionName
+# 
+# 示例依赖及其版本来源：
+# - common-compose-debug → dependencies_common.gradle 的 CommonDebugCompose.version
+# - common-wrapper-min → dependencies_common.gradle 的 CommonWrapperMin.version
+# - lib-router-compiler → dependencies_lib.gradle 的 RouterCompiler.version (注意：可能未发布到最新版)
+
+# 4.3 更新 AndroidManifest.xml
+# - 参照 Template-AAF，添加 android:exported 属性
+
+# 4.4 兼容性修复 (Android 12+ 要求)
+# - 检查 AndroidManifest.xml 中是否需要添加 android:exported
+# - 创建 libs/ 目录 (如果不存在)
+
+# 4.5 编译验证
+./gradlew clean
+./gradlew assembleDebug
+```
+
+### 步骤 5: 提供提交建议
+
+只有在所有项目编译通过后才提供提交建议：
+
+```bash
+# Template-AAF 提交
+git commit -m "chore(sample): 升级 AAF 到 8.0.0 并同步 Compose UI
+配置升级：版本号、Kotlin、Gradle、targetSdk
+依赖升级：AAF 框架和所有模块
+代码同步：Compose UI 代码和 Manifest 配置"
+
+# Template_Android 提交
+git commit -m "chore(sample): 升级 AAF 到 8.0.0 并同步 Compose UI
+参照 Template-AAF 的升级方案：代码、配置、依赖"
+
+# Template-Empty 提交
+git commit -m "chore(sample): 升级 AAF 到 8.0.0 并同步编译配置
+AAF 框架、targetSdk、android:exported 属性"
+```
+
+---
+
+## 📊 输出格式
+
 ```
 ✅ AAF 最新配置
    版本号: 8.0.0
@@ -212,172 +330,110 @@ cd /Volumes/Document/Documents/github/Template-AAF
    buildToolsVersion: 34.0.0
    libMinSdkVersion: 23
    targetSdkVersion: 31
+   Kotlin 版本: 1.8.10
+   Gradle 版本: 7.4.1
 
-📦 Template-Empty（最简示例）变更
+📦 Template-AAF（完整示例 - 第一优先级）⭐
+   config.gradle:
+   - compileSdkVersion: 32 → 34
+   - buildToolsVersion: 32.0.0 → 34.0.0
+   - libMinSdkVersion: 16 → 23
+   - targetSdkVersion: 30 → 31
+   
+   build.gradle:
+   - Kotlin: 1.7.10 → 1.8.10
+   - Gradle: 7.0.4 → 7.4.1
+   
+   dependencies.gradle:
+   - common-wrapper: 6.21.9 → 8.0.0
+   - common-debug: 6.21.12 → 8.0.0
+   - lib-router-compiler: 5.1.7 → 8.0.0
+   
+   APPTest/build.gradle:
+   - 添加 Compose 配置
+   - 更新所有 AAF 依赖
+   
+   Compose UI:
+   ✅ DebugMainActivity.kt - 已同步
+   ✅ DebugTempView.kt - 已同步
+   ✅ DebugRouterView.kt - 已同步
+   
+   AndroidManifest.xml:
+   ✅ android:exported="true" - 已添加
+
+📦 Template_Android（基础示例 - 第二优先级）
+   [参照 Template-AAF 的变更]
+   config.gradle: [同步]
+   build.gradle: [同步]
+   Application/build.gradle: [已更新]
+   APPTest/build.gradle: [已更新]
+   Compose UI: [已同步]
+   AndroidManifest.xml: [已同步]
+
+📦 Template-Empty（最简示例 - 第三优先级）
    config.gradle:
    - compileSdkVersion: 32 → 34
    - buildToolsVersion: 32.0.0 → 34.0.0
    - appMinSdkVersion: 16 → 23
    - targetSdkVersion: 30 → 31
    
-   Application/build.gradle:
+   App/build.gradle:
    - common-compose-debug: 7.1.1 → 8.0.0
    - lib-router-compiler: 5.1.7 → 8.0.0
    - common-wrapper-min: 7.1.1 → 8.0.0
-
-📦 Template_Android（基础示例）变更
-   config.gradle:
-   - compileSdkVersion: 32 → 34
-   - buildToolsVersion: 32.0.0 → 34.0.0
-   - libMinSdkVersion: 16 → 23
-   - targetSdkVersion: 30 → 31
    
-   Application/build.gradle:
-   - common-wrapper: 6.21.9 → 8.0.0
-   - lib-router-compiler: 5.1.7 → 8.0.0
-
-📦 Template-AAF（完整示例）变更
-   config.gradle:
-   - compileSdkVersion: 32 → 34
-   - buildToolsVersion: 32.0.0 → 34.0.0
-   - libMinSdkVersion: 16 → 23
-   - targetSdkVersion: 30 → 31
-   
-   dependencies.gradle:
-   - common-wrapper: 6.21.9 → 8.0.0
-   - common-debug: 6.21.12 → 8.0.0
-   - lib-router-compiler: 5.1.7 → 8.0.0
+   AndroidManifest.xml:
+   ✅ android:exported="true" - 已添加
 
 🔍 编译验证
-   ✅ Template-Empty: 编译通过
-   ✅ Template_Android: 编译通过
    ✅ Template-AAF: 编译通过
-```
-
-### 步骤 5: 验证编译
-
-**重要**：升级后必须验证所有项目编译通过
-
-```bash
-# 5.1 验证 Template-Empty 编译
-cd /Volumes/Document/Documents/github/Template-Empty
-./gradlew clean
-./gradlew assembleDebug
-# 如果编译失败，记录错误信息并修复
-
-# 5.2 验证 Template_Android 编译
-cd /Volumes/Document/Documents/github/Template_Android
-./gradlew clean
-./gradlew assembleDebug
-# 如果编译失败，记录错误信息并修复
-
-# 5.3 验证 Template-AAF 编译
-cd /Volumes/Document/Documents/github/Template-AAF
-./gradlew clean
-./gradlew assembleDebug
-# 如果编译失败，记录错误信息并修复
-```
-
-**编译验证要求**：
-- ✅ 必须执行 `./gradlew clean` 清理旧的编译产物
-- ✅ 必须执行 `./gradlew assembleDebug` 验证编译
-- ✅ 所有项目都必须编译成功才算升级完成
-- ❌ 如果有编译错误，必须先修复再继续
-
-### 步骤 6: 提供提交建议
-
-**只有在所有项目编译通过后才提交**
-
-```bash
-# Template-Empty 提交
-cd /Volumes/Document/Documents/github/Template-Empty
-git add config.gradle Application/build.gradle
-git commit -m "chore(sample): 升级 AAF 到 8.0.0 并同步编译配置
-
-- 升级 AAF 依赖到 8.0.0
-- 同步编译配置（SDK 34, minSdk 23, targetSdk 31）
-- 验证编译通过
-"
-
-# Template_Android 提交
-cd /Volumes/Document/Documents/github/Template_Android
-git add config.gradle Application/build.gradle
-git commit -m "chore(sample): 升级 AAF 到 8.0.0 并同步编译配置
-
-- 升级 AAF 依赖到 8.0.0
-- 同步编译配置（SDK 34, minSdk 23, targetSdk 31）
-- 验证编译通过
-"
-
-# Template-AAF 提交
-cd /Volumes/Document/Documents/github/Template-AAF
-git add config.gradle dependencies.gradle
-git commit -m "chore(sample): 升级 AAF 到 8.0.0 并同步编译配置
-
-- 升级 AAF 依赖到 8.0.0
-- 同步编译配置（SDK 34, minSdk 23, targetSdk 31）
-- 验证编译通过
-"
+   ✅ Template_Android: 编译通过
+   ✅ Template-Empty: 编译通过
 ```
 
 ---
 
-## 🔍 需要同步的配置项
+## ⚠️ 注意事项和常见问题
 
-### config.gradle 配置项
+### 升级顺序不可改变
+**必须按照：Template-AAF → Template_Android → Template-Empty 的顺序升级**
 
-| 配置项 | 说明 | AAF 当前值 |
-|--------|------|-----------|
-| `compileSdkVersion` | Android 编译 SDK 版本 | 34 |
-| `buildToolsVersion` | Android 编译工具版本 | 34.0.0 |
-| `libMinSdkVersion` | Lib 最低适配 Android 版本 | 23 |
-| `targetSdkVersion` | Android 最佳适配版本 | 31 |
+### 代码同步重点
+1. **Compose UI 代码**：从 AAF/APPTest 同步到示例项目
+   - DebugMainActivity.kt
+   - module/DebugTempView.kt
+   - module/DebugRouterView.kt
 
-**注意**：以下配置不需要同步（保持 Template 项目原有值）
-- `versionCode` - Demo 项目版本号
-- `versionName` - Demo 项目版本名
-- `signingConfigs` - 签名配置（使用 debug.keystore）
-- `kotlin_version` - Kotlin 版本（可选同步）
+2. **Compose 配置**：确保 build.gradle 包含
+   ```gradle
+   buildFeatures {
+       compose = true
+   }
+   composeOptions {
+       kotlinCompilerExtensionVersion = "1.4.3"
+   }
+   ```
 
-### dependencies 依赖版本
+3. **Kotlin 和 Gradle 版本**：确保与 AAF 主项目一致
+   - Kotlin 1.8.10+
+   - Gradle 7.4.1+
 
-所有 `com.bihe0832.android:xxx` 开头的依赖都需要更新到 AAF 最新版本。
+### 常见兼容性问题
 
-**常见依赖**：
-- `com.bihe0832.android:common-wrapper`
-- `com.bihe0832.android:common-debug`
-- `com.bihe0832.android:lib-router-compiler`
-- 其他所有 AAF 框架依赖
+#### targetSdk 31+ 要求
+- **问题**: Manifest merger failed: android:exported needs to be explicitly specified
+- **解决**: 为所有 LAUNCHER Activity 添加 `android:exported="true"`
 
----
+#### kotlin-android-extensions 废弃
+- **问题**: 'kotlin-android-extensions' Gradle plugin is deprecated
+- **解决**: 从 build.gradle 移除该插件
 
-## ⚠️ 注意事项
+#### Kotlin 1.8+ 和 kapt 兼容性
+- **解决**: 升级 Kotlin 到 1.8.10+，升级 Gradle 到 7.4.1+
 
-### 1. 签名配置保持不变
-Template 项目使用 `debug.keystore`，不要修改为 AAF 的签名配置。
-
-### 2. 版本号不同步
-示例项目的 `versionCode` 和 `versionName` 保持独立，不随 AAF 版本更新。
-
-### 3. 检查兼容性
-升级 SDK 版本后，可能需要检查：
-- Gradle 版本兼容性
-- Kotlin 版本兼容性
-- 依赖库的兼容性
-
-### 4. 编译验证必须
-升级后必须验证所有示例项目编译通过，编译失败必须先修复再提交。
-
-### 5. 分别提交
-三个示例项目应该分别提交，不要合并提交。
-
-### 6. 项目升级重点
-- **Template-Empty** - 最简示例，空壳项目，帮助开发者快速开始
-- **Template_Android** - 基础示例，展示标准 Android 集成 AAF 的方式
-- **Template-AAF** - 完整示例，展示 AAF 框架的完整功能和最佳实践
-- **共同要求**：保持最新版本，展示最佳实践，供外部开发者参考
-- **重要说明**：这3个都是外部示例项目，不直接在其中开发
-- **概念说明**：Sample vs Demo 的详细区分参见 `aaf_common.mdc` 第 1.2 节
+#### Compose 编译器版本
+- **问题**: Compose Compiler version 不匹配
+- **解决**: 根据 Kotlin 版本选择对应的 Compose Compiler 版本
 
 ---
 
@@ -385,19 +441,38 @@ Template 项目使用 `debug.keystore`，不要修改为 AAF 的签名配置。
 
 执行升级时，确认以下步骤：
 
+### Template-AAF（第一优先级）⭐
 - [ ] 读取 AAF 最新版本号 (ext.moduleVersionName)
 - [ ] 读取 AAF SDK 配置
-- [ ] 根据 artifactId 查找各模块的实际版本
-- [ ] 更新 Template-Empty/config.gradle
-- [ ] 更新 Template-Empty/App/build.gradle
-- [ ] 更新 Template_Android/config.gradle
-- [ ] 更新 Template_Android/Application/build.gradle
-- [ ] **更新 Template_Android/APPTest/build.gradle** ⚠️ **容易遗漏**
+- [ ] 读取 Kotlin 和 Gradle 版本
 - [ ] 更新 Template-AAF/config.gradle
+- [ ] 更新 Template-AAF/build.gradle
+- [ ] 更新 Template-AAF/gradle-wrapper.properties
 - [ ] 更新 Template-AAF/dependencies.gradle
-- [ ] **验证 Template-Empty 编译通过** ⚠️ **必须**
-- [ ] **验证 Template_Android 编译通过** ⚠️ **必须**
+- [ ] 更新 Template-AAF/APPTest/build.gradle (Compose 配置)
+- [ ] 同步 Compose UI 代码（DebugMainActivity.kt 等）
+- [ ] 更新 Template-AAF/APPTest/AndroidManifest.xml
 - [ ] **验证 Template-AAF 编译通过** ⚠️ **必须**
+- [ ] **如有问题，用户协助修复**
+
+### Template_Android（第二优先级）
+- [ ] 参照 Template-AAF 更新 config.gradle
+- [ ] 参照 Template-AAF 更新 build.gradle
+- [ ] 参照 Template-AAF 更新 gradle-wrapper.properties
+- [ ] 更新 Template_Android/Application/build.gradle
+- [ ] 更新 Template_Android/APPTest/build.gradle
+- [ ] 同步 Template-AAF 的 Compose UI 代码
+- [ ] 更新 Template_Android/APPTest/AndroidManifest.xml
+- [ ] **验证 Template_Android 编译通过** ⚠️ **必须**
+
+### Template-Empty（第三优先级）
+- [ ] 参照 Template-AAF 更新 config.gradle
+- [ ] 参照 Template-AAF 更新 gradle-wrapper.properties（如需要）
+- [ ] 更新 Template-Empty/App/build.gradle
+- [ ] 更新 Template-Empty/App/AndroidManifest.xml
+- [ ] **验证 Template-Empty 编译通过** ⚠️ **必须**
+
+### 最后步骤
 - [ ] 生成变更报告
 - [ ] 提供提交建议
 - [ ] 确认所有变更无误
