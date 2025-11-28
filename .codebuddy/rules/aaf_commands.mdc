@@ -2,7 +2,7 @@
 description: AAF 命令索引 - 统一的命令入口，快速执行各种开发任务
 alwaysApply: true
 enabled: true
-updatedAt: 2025-11-27T12:00:00.000Z
+updatedAt: 2025-11-28T08:00:00.000Z
 provider: 
 ---
 
@@ -165,6 +165,7 @@ git commit -m "feat(rules): 添加 Git 提交规范
 | `添加注释` `注释规范` | `aaf_note.mdc` | 查看注释规范，指导添加代码注释 |
 | `Demo 开发` | `aaf_demo.mdc` | 查看 Demo 项目开发规范 |
 | `Git 规范` `提交规范` `提交信息` `提交文案` `Commit` | `aaf_git.mdc` | 查看 Git 工作流和提交规范 |
+| `查询版本` `模块版本` `版本查找` | `aaf_version.mdc` | 查看 AAF 模块版本查找方法 |
 
 **使用示例：**
 ```
@@ -179,6 +180,9 @@ git commit -m "feat(rules): 添加 Git 提交规范
 
 你: "怎么写 Commit Message"
    → 提供 Git 提交规范和分支管理指导
+
+你: "如何查找 common-debug 的版本"
+   → 提供 AAF 模块版本查找方法和步骤
 ```
 
 ---
@@ -447,3 +451,4 @@ aaf_commands.mdc 识别命令
 | `aaf_note.mdc` | 注释规范 |
 | `aaf_demo.mdc` | Demo 开发规范 |
 | `aaf_git.mdc` | Git 提交规范 |
+| `aaf_version.mdc` | AAF 模块版本查找方法 |

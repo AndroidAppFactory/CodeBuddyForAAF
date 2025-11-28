@@ -17,7 +17,8 @@ CodeBuddyForAAF/
 │   ├── aaf_demo.mdc                     # Demo 开发规范
 │   ├── aaf_dependency.mdc               # 依赖管理规范
 │   ├── aaf_git.mdc                      # Git 提交规范
-│   └── aaf_note.mdc                     # 注释规范
+│   ├── aaf_note.mdc                     # 注释规范
+│   └── aaf_version.mdc                  # 版本查找方法
 ├── init.sh                              # 项目初始化脚本
 ├── README.md                            # 项目说明文档
 ├── AAF-Temp/                            # Demo 开发目录（自动创建，从 Template-Empty clone）
@@ -100,6 +101,7 @@ CodeBuddyForAAF/
 | `添加注释` | 查看注释规范 |
 | `Demo 开发` | 查看 Demo 开发规范 |
 | `提交规范` | 自动生成符合规范的 Git 提交信息 |
+| `查询版本` | 查看 AAF 模块版本查找方法 |
 
 **示例：**
 ```
@@ -111,6 +113,9 @@ CodeBuddyForAAF/
 
 你: "帮我给这个类添加注释"
    → 生成标准格式的注释
+
+你: "如何查找 common-debug 的版本"
+   → 提供 AAF 模块版本查找方法和步骤
 ```
 
 ### 🔍 检查相关
@@ -141,10 +146,11 @@ CodeBuddyForAAF/
 | 规则文件 | 说明 |
 |---------|------|
 | `aaf_common.mdc` | AAF 框架通用开发规范和项目结构 |
-| `aaf_demo.mdc` | Demo 开发规范（Template-Empty 临时开发） |
+| `aaf_demo.mdc` | Demo 开发规范（AAF-Temp 临时开发） |
 | `aaf_dependency.mdc` | 集中式依赖管理规范 |
 | `aaf_git.mdc` | Git Commit Message 规范 |
 | `aaf_note.mdc` | 代码注释规范和文档编写标准 |
+| `aaf_version.mdc` | AAF 模块版本查找方法 |
 
 ## 常见问题
 

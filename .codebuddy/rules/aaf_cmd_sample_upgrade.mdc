@@ -2,7 +2,7 @@
 description: AAF Sample 项目升级规则 - 自动同步示例项目的 AAF 版本和编译配置
 alwaysApply: false
 enabled: true
-updatedAt: 2025-11-27T12:00:00.000Z
+updatedAt: 2025-11-28T08:00:00.000Z
 provider: 
 ---
 
@@ -42,18 +42,23 @@ provider:
 - **文件**: `config.gradle`
   - 读取 SDK 版本配置：`compileSdkVersion`, `buildToolsVersion`, `libMinSdkVersion`, `targetSdkVersion`
 - **文件**: `dependencies.gradle`
-  - 读取 AAF 版本号：`ext.moduleVersionName`
+  - 读取 AAF 通用版本号：`ext.moduleVersionName`
+- **文件**: `dependencies_*.gradle` (所有依赖配置文件)
+  - 读取各模块的具体版本：通过 `artifactId` 匹配查找对应的 `version`
+  - 示例：`common-debug` → 在 `dependencies_common.gradle` 中查找 `"artifactId" : "common-debug"` 对应的 `"version"`
 
 ### 2. Template-Empty（更新目标）
 - **文件**: `config.gradle`
-  - 更新：`compileSdkVersion`, `buildToolsVersion`, `libMinSdkVersion`, `targetSdkVersion`
-- **文件**: `Application/build.gradle`
+  - 更新：`compileSdkVersion`, `buildToolsVersion`, `appMinSdkVersion`, `targetSdkVersion`
+- **文件**: `App/build.gradle`
   - 更新：所有 `com.bihe0832.android:xxx:x.x.x` 依赖版本
 
 ### 3. Template_Android（更新目标）
 - **文件**: `config.gradle`
   - 更新：`compileSdkVersion`, `buildToolsVersion`, `libMinSdkVersion`, `targetSdkVersion`
 - **文件**: `Application/build.gradle`
+  - 更新：所有 `com.bihe0832.android:xxx:x.x.x` 依赖版本
+- **文件**: `APPTest/build.gradle`
   - 更新：所有 `com.bihe0832.android:xxx:x.x.x` 依赖版本
 
 ### 4. Template-AAF（更新目标）
@@ -69,7 +74,7 @@ provider:
 ### 步骤 1: 读取 AAF 最新配置
 
 ```bash
-# 1.1 读取 AAF 版本号
+# 1.1 读取 AAF 通用版本号
 cd /Volumes/Document/Documents/github/AndroidAppFactory
 AAF_VERSION=$(grep "ext.moduleVersionName" dependencies.gradle | grep -o '".*"' | tr -d '"')
 
@@ -78,7 +83,35 @@ COMPILE_SDK=$(grep "compileSdkVersion = " config.gradle | grep -o '[0-9]*')
 BUILD_TOOLS=$(grep "buildToolsVersion = " config.gradle | grep -o '".*"' | tr -d '"')
 LIB_MIN_SDK=$(grep "libMinSdkVersion = " config.gradle | grep -o '[0-9]*')
 TARGET_SDK=$(grep "targetSdkVersion = " config.gradle | grep -o '[0-9]*')
+
+# 1.3 读取各模块的具体版本 (通过 artifactId 查找)
+# 重要：不是所有模块都发布到 ext.moduleVersionName，需要根据 artifactId 在对应的 dependencies_*.gradle 中查找实际版本
+# 
+# 查找方法：
+# - 在 AAF 的 dependencies_*.gradle 文件中搜索 "artifactId" : "模块名"
+# - 读取对应的 "version" 字段
+# 
+# 示例：
+# common-debug → 在 dependencies_common.gradle 中查找
+#   "CommonDebug" : [
+#       "version"    : "8.0.0",
+#       "artifactId" : "common-debug",
+#       ...
+#   ]
+# 
+# lib-router-compiler → 在 dependencies_lib.gradle 中查找
+#   "RouterCompiler" : [
+#       "version"    : "5.1.7",
+#       "artifactId" : "lib-router-compiler",
+#       ...
+#   ]
 ```
+
+**版本查找策略**：
+1. **优先使用模块实际版本**：在 `dependencies_*.gradle` 中通过 `artifactId` 查找对应的 `version`
+2. **备选通用版本**：如果找不到，使用 `ext.moduleVersionName` 作为默认版本
+3. **Maven 验证**：对于关键依赖（如 kapt 处理器），验证 Maven 仓库中是否已发布该版本
+4. **版本回退**：如果 Maven 未发布，使用已发布的最新版本
 
 ### 步骤 2: 更新 Template-Empty
 
@@ -88,13 +121,23 @@ cd /Volumes/Document/Documents/github/Template-Empty
 # 2.1 更新 config.gradle
 # - compileSdkVersion
 # - buildToolsVersion
-# - libMinSdkVersion (对应 appMinSdkVersion)
+# - appMinSdkVersion (对应 AAF 的 libMinSdkVersion)
 # - targetSdkVersion
 
-# 2.2 更新 Application/build.gradle
-# - com.bihe0832.android:common-compose-debug:x.x.x → AAF_VERSION
-# - com.bihe0832.android:lib-router-compiler:x.x.x → AAF_VERSION
-# - com.bihe0832.android:common-wrapper-min:x.x.x → AAF_VERSION
+# 2.2 更新 App/build.gradle
+# 依赖更新方法：
+# - 提取 artifactId (如 common-compose-debug)
+# - 在 AAF/dependencies_common.gradle 中查找对应的 version
+# - 如果未找到，使用 ext.moduleVersionName
+# 
+# 示例依赖及其版本来源：
+# - common-compose-debug → dependencies_common.gradle 的 CommonDebugCompose.version
+# - common-wrapper-min → dependencies_common.gradle 的 CommonWrapperMin.version
+# - lib-router-compiler → dependencies_lib.gradle 的 RouterCompiler.version (注意：可能未发布到最新版)
+
+# 2.3 兼容性修复 (Android 12+ 要求)
+# - 检查 AndroidManifest.xml 中是否需要添加 android:exported
+# - 创建 libs/ 目录 (如果不存在)
 ```
 
 ### 步骤 3: 更新 Template_Android
@@ -109,8 +152,14 @@ cd /Volumes/Document/Documents/github/Template_Android
 # - targetSdkVersion
 
 # 3.2 更新 Application/build.gradle
-# - com.bihe0832.android:common-wrapper:x.x.x → AAF_VERSION
-# - com.bihe0832.android:lib-router-compiler:x.x.x → AAF_VERSION
+# 依赖更新：
+# - common-wrapper → dependencies_common.gradle 的 CommonWrapper.version
+# - lib-router-compiler → dependencies_lib.gradle 的 RouterCompiler.version
+
+# 3.3 更新 APPTest/build.gradle (重要！容易遗漏)
+# 依赖更新：
+# - common-debug → dependencies_common.gradle 的 CommonDebug.version
+# - lib-router-compiler → dependencies_lib.gradle 的 RouterCompiler.version
 ```
 
 ### 步骤 4: 更新 Template-AAF
@@ -125,8 +174,35 @@ cd /Volumes/Document/Documents/github/Template-AAF
 # - targetSdkVersion
 
 # 4.2 更新 dependencies.gradle
-# - 所有 com.bihe0832.android:xxx:x.x.x → AAF_VERSION
+# 两种更新方式：
+# 
+# 方式 1：直接更新 ext.moduleVersionName
+# - ext.moduleVersionName 作为默认版本
+# 
+# 方式 2：逐个更新模块依赖版本
+# - 在 AAF/dependencies_*.gradle 中通过 artifactId 查找实际版本
+# - 示例：
+#   "Application": [
+#       "apidependenciesList": [
+#           "com.bihe0832.android:common-wrapper:x.x.x"  → 查找 common-wrapper 的实际版本
+#       ],
+#       "specialdependenciesList": [
+#           "kapt": ["com.bihe0832.android:lib-router-compiler:x.x.x"]  → 查找 lib-router-compiler 的实际版本
+#       ]
+#   ]
 ```
+
+### 步骤 4.5: 版本号查找
+
+**重要**：不是所有 AAF 模块都发布到 `ext.moduleVersionName`，需要根据 `artifactId` 查找实际版本。
+
+**详细的版本查找方法请参考**: `aaf_version.mdc` 规则
+
+**快速参考**：
+- ✅ 优先：从 `dependencies_*.gradle` 中通过 `artifactId` 查找模块实际版本
+- ✅ 备选：使用 `ext.moduleVersionName` 作为默认版本
+- ✅ 验证：检查 Maven 仓库是否已发布该版本
+- ⚠️ 特殊：`lib-router-compiler` 等编译器模块通常独立更新，版本可能不同
 
 输出格式：
 ```
@@ -309,12 +385,14 @@ Template 项目使用 `debug.keystore`，不要修改为 AAF 的签名配置。
 
 执行升级时，确认以下步骤：
 
-- [ ] 读取 AAF 最新版本号
+- [ ] 读取 AAF 最新版本号 (ext.moduleVersionName)
 - [ ] 读取 AAF SDK 配置
+- [ ] 根据 artifactId 查找各模块的实际版本
 - [ ] 更新 Template-Empty/config.gradle
-- [ ] 更新 Template-Empty/Application/build.gradle
+- [ ] 更新 Template-Empty/App/build.gradle
 - [ ] 更新 Template_Android/config.gradle
 - [ ] 更新 Template_Android/Application/build.gradle
+- [ ] **更新 Template_Android/APPTest/build.gradle** ⚠️ **容易遗漏**
 - [ ] 更新 Template-AAF/config.gradle
 - [ ] 更新 Template-AAF/dependencies.gradle
 - [ ] **验证 Template-Empty 编译通过** ⚠️ **必须**
@@ -330,4 +408,5 @@ Template 项目使用 `debug.keystore`，不要修改为 AAF 的签名配置。
 
 - `aaf_commands.mdc` - 命令索引
 - `aaf_common.mdc` - AAF 框架通用规范
+- `aaf_version.mdc` - AAF 模块版本查找方法
 - `aaf_dependency.mdc` - 依赖管理规范
