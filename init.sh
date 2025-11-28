@@ -2,7 +2,8 @@
 # author code@bihe0832.com
 # CodeBuddyForAAF 初始化脚本（优化版）
 
-set -e
+# 不使用 set -e，因为我们需要自己处理返回值
+# set -e
 
 # 颜色定义
 RED='\033[0;31m'
@@ -44,21 +45,26 @@ log_info "当前目录: $SCRIPT_DIR"
 log_info "上级目录: $PARENT_DIR"
 echo ""
 
-# 项目配置
-declare -A PROJECT_INFO
-PROJECT_INFO["AndroidAppFactory"]="AAF 框架核心代码库（必需）"
-PROJECT_INFO["AndroidAppFactory-Doc"]="AAF 框架完整文档和 API 说明（可选）"
-PROJECT_INFO["Template-Empty"]="最简示例项目，用于快速开始和内部开发（可选）"
-PROJECT_INFO["Template_Android"]="基础示例项目，标准 Android 集成（可选）"
-PROJECT_INFO["Template-AAF"]="完整示例项目，展示 AAF 所有功能（可选）"
+# 项目配置（使用函数代替关联数组，兼容旧版 bash）
+get_project_info() {
+    case "$1" in
+        "AndroidAppFactory") echo "AAF 框架核心代码库（必需）" ;;
+        "AndroidAppFactory-Doc") echo "AAF 框架完整文档和 API 说明（可选）" ;;
+        "Template-Empty") echo "最简示例项目，用于快速开始和内部开发（可选）" ;;
+        "Template_Android") echo "基础示例项目，标准 Android 集成（可选）" ;;
+        "Template-AAF") echo "完整示例项目，展示 AAF 所有功能（可选）" ;;
+    esac
+}
 
-# Git 仓库地址
-declare -A PROJECT_GIT
-PROJECT_GIT["AndroidAppFactory"]="https://github.com/AndroidAppFactory/AndroidAppFactory.git"
-PROJECT_GIT["AndroidAppFactory-Doc"]="https://github.com/AndroidAppFactory/AndroidAppFactory-Doc.git"
-PROJECT_GIT["Template-Empty"]="https://github.com/AndroidAppFactory/Template-Empty.git"
-PROJECT_GIT["Template_Android"]="https://github.com/AndroidAppFactory/Template_Android.git"
-PROJECT_GIT["Template-AAF"]="https://github.com/AndroidAppFactory/Template-AAF.git"
+get_project_git() {
+    case "$1" in
+        "AndroidAppFactory") echo "https://github.com/AndroidAppFactory/AndroidAppFactory.git" ;;
+        "AndroidAppFactory-Doc") echo "https://github.com/AndroidAppFactory/AndroidAppFactory-Doc.git" ;;
+        "Template-Empty") echo "https://github.com/AndroidAppFactory/Template-Empty.git" ;;
+        "Template_Android") echo "https://github.com/AndroidAppFactory/Template_Android.git" ;;
+        "Template-AAF") echo "https://github.com/AndroidAppFactory/Template-AAF.git" ;;
+    esac
+}
 
 # 询问用户是否执行操作
 ask_yes_no() {
@@ -83,26 +89,39 @@ ask_yes_no() {
 can_git_pull() {
     local project_path="$1"
     
-    if [ ! -d "$project_path/.git" ]; then
-        return 1
-    fi
-    
-    cd "$project_path"
-    
-    # 检查是否有未提交的修改
-    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-        return 2  # 有未提交的修改
-    fi
-    
-    # 检查是否可以 pull
-    git fetch --dry-run &>/dev/null
-    local behind=$(git rev-list HEAD..origin/$(git branch --show-current) --count 2>/dev/null)
-    
-    if [ -n "$behind" ] && [ "$behind" -gt 0 ]; then
-        return 0  # 可以更新
-    fi
-    
-    return 3  # 已是最新
+    (
+        if [ ! -d "$project_path/.git" ]; then
+            exit 1
+        fi
+        
+        cd "$project_path" || exit 1
+        
+        # 检查是否有未提交的修改
+        if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+            exit 2  # 有未提交的修改
+        fi
+        
+        # 快速检查远程分支（不实际 fetch）
+        local current_branch=$(git branch --show-current 2>/dev/null)
+        if [ -z "$current_branch" ]; then
+            exit 1  # 无法获取当前分支
+        fi
+        
+        # 检查远程分支是否存在
+        if ! git rev-parse --verify "origin/$current_branch" &>/dev/null; then
+            exit 1  # 远程分支不存在
+        fi
+        
+        # 比较本地和远程的提交数
+        local behind=$(git rev-list HEAD..origin/$current_branch --count 2>/dev/null)
+        
+        if [ -n "$behind" ] && [ "$behind" -gt 0 ]; then
+            exit 0  # 可以更新
+        fi
+        
+        exit 3  # 已是最新
+    )
+    return $?
 }
 
 # 更新项目
@@ -112,35 +131,41 @@ update_project() {
     
     log_info "正在更新项目: $project_name"
     
-    cd "$project_path"
-    
-    if git pull; then
-        log_success "成功更新项目: $project_name"
-        return 0
-    else
-        log_error "更新项目失败: $project_name"
-        return 1
-    fi
+    (
+        cd "$project_path" || return 1
+        
+        if git pull; then
+            log_success "成功更新项目: $project_name"
+            return 0
+        else
+            log_error "更新项目失败: $project_name"
+            return 1
+        fi
+    )
+    return $?
 }
 
 # 克隆项目到上级目录
 clone_project_to_parent() {
     local project_name="$1"
-    local git_url="${PROJECT_GIT[$project_name]}"
+    local git_url="$(get_project_git "$project_name")"
     
     log_info "正在克隆项目: $project_name"
     log_info "目标位置: $PARENT_DIR/$project_name"
     log_info "Git 地址: $git_url"
     
-    cd "$PARENT_DIR"
-    
-    if git clone "$git_url"; then
-        log_success "成功克隆项目: $project_name"
-        return 0
-    else
-        log_error "克隆项目失败: $project_name"
-        return 1
-    fi
+    (
+        cd "$PARENT_DIR" || return 1
+        
+        if git clone "$git_url"; then
+            log_success "成功克隆项目: $project_name"
+            return 0
+        else
+            log_error "克隆项目失败: $project_name"
+            return 1
+        fi
+    )
+    return $?
 }
 
 # 检查并处理单个项目
@@ -148,11 +173,12 @@ check_and_handle_project() {
     local project_name="$1"
     local is_required="${2:-false}"
     local project_path="$PARENT_DIR/$project_name"
+    local project_info="$(get_project_info "$project_name")"
     
     echo ""
     log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     log_info "检查项目: $project_name"
-    log_info "说明: ${PROJECT_INFO[$project_name]}"
+    log_info "说明: $project_info"
     
     # 检查项目是否存在（仅检查上级目录）
     if [ -d "$project_path" ]; then
@@ -161,6 +187,9 @@ check_and_handle_project() {
         # 检查是否可以更新
         can_git_pull "$project_path"
         local status=$?
+        
+        # DEBUG: 显示状态码
+        # echo "DEBUG: can_git_pull returned status=$status"
         
         case $status in
             0)
@@ -272,26 +301,28 @@ init_project_config() {
     
     log_info "初始化项目配置: $project_name"
     
-    cd "$project_path"
-    
-    # 创建 local.properties
-    if [ ! -f "local.properties" ]; then
-        if [ -n "$ANDROID_HOME" ]; then
-            echo "sdk.dir=$ANDROID_HOME" > local.properties
-            log_success "已创建 local.properties"
-        elif [ -n "$ANDROID_SDK_ROOT" ]; then
-            echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
-            log_success "已创建 local.properties"
-        else
-            log_warning "未设置 ANDROID_HOME，请手动配置 local.properties"
+    (
+        cd "$project_path" || return 1
+        
+        # 创建 local.properties
+        if [ ! -f "local.properties" ]; then
+            if [ -n "$ANDROID_HOME" ]; then
+                echo "sdk.dir=$ANDROID_HOME" > local.properties
+                log_success "已创建 local.properties"
+            elif [ -n "$ANDROID_SDK_ROOT" ]; then
+                echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+                log_success "已创建 local.properties"
+            else
+                log_warning "未设置 ANDROID_HOME，请手动配置 local.properties"
+            fi
         fi
-    fi
-    
-    # 设置 gradlew 可执行权限
-    if [ -f "gradlew" ]; then
-        chmod +x gradlew
-        log_success "已设置 gradlew 可执行权限"
-    fi
+        
+        # 设置 gradlew 可执行权限
+        if [ -f "gradlew" ]; then
+            chmod +x gradlew
+            log_success "已设置 gradlew 可执行权限"
+        fi
+    )
 }
 
 # 检查开发环境
