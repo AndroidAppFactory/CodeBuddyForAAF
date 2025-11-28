@@ -63,5 +63,21 @@ Template-AAF
 ######################
 # 临时开发项目（从Template-Empty复制）
 ######################
-AAF-TempAAF-Temp/
 AAF-Temp/
+
+######################
+# 升级验证报告（自动生成）
+######################
+sample_upgrade_report.md
+template_android_errors.md
+template_empty_error.md
+SAMPLE_UPGRADE_REPORT.md
+*_upgrade_report*.md
+*_error*.md
+
+######################
+# Skill 打包文件
+######################
+*.zip
+aaf-sample-upgrade.zip
+
