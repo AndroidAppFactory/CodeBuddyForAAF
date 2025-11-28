@@ -1,0 +1,425 @@
+---
+description: AAF 版本升级规则 - 指导并执行 AAF 依赖版本更新
+alwaysApply: false
+enabled: true
+updatedAt: 2025-11-28T20:00:00.000Z
+provider: 
+---
+
+# AAF 版本升级规则
+
+## 📋 命令触发
+
+当用户说以下关键词时，自动执行此规则：
+- "升级 XXX 的 AAF 版本"
+- "更新 XXX 的 AAF 依赖"
+- "升级 AAF 版本"
+- "更新 AAF 版本"
+
+**示例：**
+- "升级 mna-application 的 AAF 版本"
+- "更新 Template-AAF 的 AAF 依赖"
+
+---
+
+## ⚠️ 核心原则
+
+### ❌ 错误做法
+
+**不要**根据 AAF 的"最新版本号"统一更新所有版本变量！
+
+```gradle
+// 错误示例：看到 AAF 最新版本是 8.0.1，就全部改成 8.0.1
+aaf_version = '8.0.1'
+aaf_test_version = '8.0.1'
+aaf_test_compose_version = '8.0.1'
+aaf_tbs_version = '8.0.1'
+aaf_screen_version = '8.0.1'  // ❌ 错误！screen 模块可能还是 8.0.0
+aaf_asr_version = '8.0.1'
+```
+
+### ✅ 正确做法
+
+**必须**根据项目中实际使用的 AAF 模块，逐个查找对应模块的真实版本号！
+
+```gradle
+// 正确示例：根据每个模块的实际版本号更新
+aaf_version = '8.0.1'              // common-wrapper 的版本
+aaf_test_version = '8.0.1'         // common-debug 的版本
+aaf_test_compose_version = '8.0.1' // common-compose-debug 的版本
+aaf_tbs_version = '8.0.1'          // common-wrapper-tbs 的版本
+aaf_screen_version = '8.0.0'       // ✅ lib-wrapper-screen 实际是 8.0.0
+aaf_asr_version = '8.0.1'          // lib-asr-wrapper 的版本
+```
+
+**重要：AAF 框架的不同模块可能有不同的版本号，这是正常的，不要强行统一！**
+
+---
+
+## 🔄 自动执行流程
+
+### 步骤 1：定位目标项目
+
+根据用户提供的项目名称，定位项目路径。
+
+**已知项目映射：**
+
+| 项目名称 | 项目路径 |
+|---------|---------|
+| `mna-application` | `/Volumes/Document/Documents/mna/mna-application` |
+| `Template-AAF` | `/Volumes/Document/Documents/github/Template-AAF` |
+| `Template_Android` | `/Volumes/Document/Documents/github/Template_Android` |
+| `Template-Empty` | `/Volumes/Document/Documents/github/Template-Empty` |
+
+**查找方法：**
+```bash
+# 在常见路径中搜索项目
+find /Volumes/Document/Documents/github -maxdepth 1 -type d -name "*项目名*"
+find /Volumes/Document/Documents/mna -maxdepth 1 -type d -name "*项目名*"
+```
+
+### 步骤 2：识别项目使用的 AAF 模块
+
+**2.1 查找版本配置文件**
+
+查找 `config.gradle` 或 `dependencies_aaf_config.gradle`，找到所有 AAF 版本变量：
+
+```gradle
+// 示例：在 config.gradle 中找到
+aaf_version = '8.0.0'
+aaf_test_version = '8.0.0'
+aaf_tbs_version = '8.0.0'
+aaf_screen_version = '8.0.0'
+aaf_asr_version = '8.0.0'
+```
+
+**2.2 查找依赖关系**
+
+在 `dependencies.gradle` 中找到版本变量对应的模块：
+
+```gradle
+// 示例：
+"com.bihe0832.android:common-wrapper:${project.aaf_version}"
+"com.bihe0832.android:common-debug:${project.aaf_test_version}"
+"com.bihe0832.android:common-wrapper-tbs:${project.aaf_tbs_version}"
+"com.bihe0832.android:lib-wrapper-screen:${project.aaf_screen_version}"
+"com.bihe0832.android:lib-asr-wrapper:${project.aaf_asr_version}"
+```
+
+**2.3 建立映射表**
+
+| 版本变量 | 对应的 AAF 模块 |
+|---------|---------------|
+| `aaf_version` | `common-wrapper` |
+| `aaf_test_version` | `common-debug` |
+| `aaf_test_compose_version` | `common-compose-debug` |
+| `aaf_tbs_version` | `common-wrapper-tbs` |
+| `aaf_screen_version` | `lib-wrapper-screen` |
+| `aaf_asr_version` | `lib-asr-wrapper` |
+
+### 步骤 3：查找 AAF 各模块的实际版本
+
+**重要：此步骤遵循 `aaf_version.mdc` 规则进行查找。**
+
+**AAF 项目路径：**
+```
+/Volumes/Document/Documents/github/AndroidAppFactory
+```
+
+**查找方法**（详见 `aaf_version.mdc`）：
+
+1. **根据 artifactId 精确查找**（推荐）
+
+   ```bash
+   cd /Volumes/Document/Documents/github/AndroidAppFactory
+   
+   # 查找模块配置文件
+   grep -r '"artifactId".*:.*"common-wrapper"' dependencies_*.gradle
+   
+   # 读取对应的 version 字段
+   ```
+
+2. **模块版本定义文件映射**
+
+   | 模块类型 | 版本定义文件 | 示例模块 |
+   |---------|------------|---------|
+   | **通用公共组件** | `dependencies_common.gradle` | `common-wrapper`, `common-debug` 等 |
+   | **TBS 相关组件** | `dependencies_tbs.gradle` | `common-wrapper-tbs` 等 |
+   | **锁屏/Widget 组件** | `dependencies_lock_widget.gradle` | `lib-wrapper-screen` 等 |
+   | **ASR 语音组件** | `dependencies_asr.gradle` | `lib-asr-wrapper` 等 |
+   | **基础 Lib 组件** | `dependencies_lib.gradle` | 各种 `lib-*` 基础库 |
+
+3. **提取版本号**
+
+   在对应文件中找到 `"version"` 字段：
+   
+   ```gradle
+   "CommonWrapper": [
+       "version": "8.0.1",  // ← 使用这个实际版本
+       "artifactId": "common-wrapper",
+       ...
+   ]
+   ```
+
+**详细查找方法请参考 `aaf_version.mdc` 规则。**
+
+### 步骤 4：在会话中展示版本升级信息
+
+**直接在对话中展示升级报告，不生成本地 Markdown 文件。**
+
+**展示格式：**
+
+```
+## AAF 版本升级分析
+
+**项目：** [项目名称]
+**配置文件：** [config.gradle 路径]
+
+### 版本变更：
+
+| 版本变量 | 对应模块 | 当前版本 | 最新版本 | 操作 |
+|---------|---------|---------|---------|------|
+| aaf_version | common-wrapper | 8.0.0 | 8.0.1 | 升级 ⬆️ |
+| aaf_test_version | common-debug | 8.0.0 | 8.0.1 | 升级 ⬆️ |
+| aaf_tbs_version | common-wrapper-tbs | 8.0.0 | 8.0.1 | 升级 ⬆️ |
+| aaf_screen_version | lib-wrapper-screen | 8.0.0 | 8.0.0 | 保持 ✓ |
+| aaf_asr_version | lib-asr-wrapper | 8.0.0 | 8.0.1 | 升级 ⬆️ |
+
+### 注意事项：
+- ⚠️ `aaf_screen_version` 保持 8.0.0，因为 lib-wrapper-screen 的实际版本是 8.0.0
+- ✅ 所有版本号已根据 AAF 项目中的实际模块版本确认
+```
+
+### 步骤 5：询问用户确认
+
+**必须询问用户是否执行更新：**
+
+```
+已生成版本升级报告（见上方）。
+
+是否执行此次 AAF 版本升级？
+```
+
+**等待用户确认后再执行步骤 6。**
+
+### 步骤 6：执行版本更新
+
+用户确认后，使用 `replace_in_file` 工具更新配置文件中的版本号。
+
+**更新示例：**
+```gradle
+# 更新前
+aaf_version = '8.0.0'
+aaf_test_version = '8.0.0'
+aaf_tbs_version = '8.0.0'
+aaf_screen_version = '8.0.0'
+aaf_asr_version = '8.0.0'
+
+# 更新后
+aaf_version = '8.0.1'
+aaf_test_version = '8.0.1'
+aaf_tbs_version = '8.0.1'
+aaf_screen_version = '8.0.0'  // 保持不变
+aaf_asr_version = '8.0.1'
+```
+
+### 步骤 7：生成提交信息建议
+
+**提交信息格式：**
+
+```
+chore(deps): 升级 AAF 依赖版本
+
+- aaf_version: 8.0.0 → 8.0.1 (common-wrapper)
+- aaf_test_version: 8.0.0 → 8.0.1 (common-debug)
+- aaf_tbs_version: 8.0.0 → 8.0.1 (common-wrapper-tbs)
+- aaf_screen_version: 保持 8.0.0 (lib-wrapper-screen 实际版本)
+- aaf_asr_version: 8.0.0 → 8.0.1 (lib-asr-wrapper)
+
+参考规则：aaf_cmd_version_upgrade
+```
+
+---
+
+## 📝 输出示例
+
+### 成功示例
+
+```
+✅ AAF 版本升级完成
+
+**项目：** mna-application
+**配置文件：** /Volumes/Document/Documents/mna/mna-application/config.gradle
+
+**变更内容：**
+- aaf_version: 8.0.0 → 8.0.1
+- aaf_test_version: 8.0.0 → 8.0.1
+- aaf_tbs_version: 8.0.0 → 8.0.1
+- aaf_screen_version: 保持 8.0.0 ✓
+- aaf_asr_version: 8.0.0 → 8.0.1
+
+**提交建议：**
+chore(deps): 升级 AAF 依赖版本
+...
+
+需要我提交这些更改吗？
+```
+
+### 无需升级示例
+
+```
+ℹ️ AAF 版本检查完成
+
+**项目：** Template-AAF
+**配置文件：** /Volumes/Document/Documents/github/Template-AAF/config.gradle
+
+**检查结果：**
+- aaf_version: 8.0.1 ✓ (已是最新)
+- aaf_test_version: 8.0.1 ✓ (已是最新)
+
+所有 AAF 依赖已是最新版本，无需升级。
+```
+
+---
+
+## 📚 手动更新参考指南
+
+如果需要手动更新，按以下详细步骤操作：
+
+### 步骤 1：识别项目使用的 AAF 模块
+
+查看项目的 `dependencies.gradle` 或 `config.gradle`，找出所有使用的 AAF 模块：
+
+```gradle
+// 示例：在 dependencies.gradle 中找到的 AAF 依赖
+"com.bihe0832.android:common-wrapper:${project.aaf_version}"
+"com.bihe0832.android:common-wrapper-tbs:${project.aaf_tbs_version}"
+"com.bihe0832.android:lib-wrapper-screen:${project.aaf_screen_version}"
+"com.bihe0832.android:lib-asr-wrapper:${project.aaf_asr_version}"
+"com.bihe0832.android:common-debug:${project.aaf_test_version}"
+"com.bihe0832.android:common-compose-debug:${project.aaf_test_compose_version}"
+```
+
+整理出需要更新的版本变量及对应模块。
+
+### 步骤 2：在 AAF 项目中查找模块版本
+
+**重要：详细的版本查找方法请参考 `aaf_version.mdc` 规则。**
+
+#### 快速参考
+
+| 模块类型 | 版本定义文件 |
+|---------|------------|
+| `common-wrapper`, `common-debug` 等 | `dependencies_common.gradle` |
+| `common-wrapper-tbs` 等 | `dependencies_tbs.gradle` |
+| `lib-wrapper-screen` 等 | `dependencies_lock_widget.gradle` |
+| `lib-asr-wrapper` 等 | `dependencies_asr.gradle` |
+
+**推荐查找方法**（详见 `aaf_version.mdc`）：
+
+```bash
+cd /Volumes/Document/Documents/github/AndroidAppFactory
+
+# 根据 artifactId 精确查找
+grep -r '"artifactId".*:.*"common-wrapper"' dependencies_*.gradle
+
+# 提取版本号
+grep -A 2 '"artifactId".*:.*"common-wrapper"' dependencies_*.gradle | grep version
+```
+
+### 步骤 3：逐个更新版本号
+
+根据查找到的实际版本号，手动更新配置文件：
+
+```gradle
+// config.gradle 或 dependencies_aaf_config.gradle
+
+aaf_version = '8.0.1'              // 查找 common-wrapper → 8.0.1
+aaf_test_version = '8.0.1'         // 查找 common-debug → 8.0.1
+aaf_test_compose_version = '8.0.1' // 查找 common-compose-debug → 8.0.1
+aaf_tbs_version = '8.0.1'          // 查找 common-wrapper-tbs → 8.0.1
+aaf_screen_version = '8.0.0'       // 查找 lib-wrapper-screen → 8.0.0 ⚠️
+aaf_asr_version = '8.0.1'          // 查找 lib-asr-wrapper → 8.0.1
+```
+
+### 步骤 4：验证版本号
+
+**检查方法：**
+
+1. **本地编译测试**
+
+   ```bash
+   ./gradlew clean
+   ./gradlew :ModuleName:dependencies
+   ```
+
+   查看是否能正确解析依赖。
+
+2. **查看依赖树**
+
+   ```bash
+   ./gradlew :app:dependencies --configuration releaseRuntimeClasspath | grep bihe0832
+   ```
+
+---
+
+## 📋 检查清单
+
+更新 AAF 版本时，必须确认：
+
+- [ ] 已识别项目中所有使用的 AAF 模块
+- [ ] 已在 AAF 项目中查找每个模块的实际版本号
+- [ ] 未根据"最新版本"统一更新所有版本变量
+- [ ] 已逐个验证版本号的准确性
+- [ ] 版本号不一致的模块已保持其实际版本
+- [ ] 提交信息中说明了每个版本的来源
+
+---
+
+## ⚠️ 重要注意事项
+
+### 1. 版本号不一致是正常的
+
+不同模块可能有不同的版本号，**不要强行统一**！
+
+例如：
+- `common-wrapper` 可能是 8.0.1
+- `lib-wrapper-screen` 可能是 8.0.0
+
+这是正常的，保持各自的实际版本。
+
+### 2. 必须逐个查找模块版本
+
+**不要假设：**
+- ❌ "AAF 最新版本是 8.0.1，所以所有模块都是 8.0.1"
+- ✅ "必须逐个查找每个模块的实际版本号"
+
+### 3. 验证版本号存在性
+
+更新前，确认版本号在 AAF 项目中确实存在：
+
+```bash
+# 在 AAF 项目中验证
+grep -r "版本号" dependencies_*.gradle
+```
+
+---
+
+## 🎯 总结
+
+**核心原则：根据实际模块版本更新，不统一版本号！**
+
+- ✅ **正确**：根据实际模块查找版本
+- ❌ **错误**：看最新版本号统一修改
+- ⚠️ **重要**：版本号不一致是正常的，不要强行统一
+
+**更新原则：实事求是，版本对应！**
+
+---
+
+## 🔗 相关规则
+
+- **`aaf_version.mdc`** - AAF 模块版本查找方法（详细的查找步骤和映射表）
+- `aaf_cmd_sample_upgrade.mdc` - 示例项目升级规则
+- `aaf_dependency.mdc` - 依赖管理规范
+- `aaf_commands.mdc` - 命令索引

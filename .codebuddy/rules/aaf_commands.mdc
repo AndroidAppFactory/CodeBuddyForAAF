@@ -74,7 +74,35 @@ git commit -m "feat(rules): 添加 Git 提交规范
 
 ---
 
-### 3. 升级示例项目 AAF 版本
+### 3. 升级项目 AAF 版本
+
+**触发关键词**：
+- "升级 XXX 的 AAF 版本"
+- "更新 XXX 的 AAF 依赖"
+- "升级 AAF 版本"
+- "更新 AAF 版本"
+
+**执行规则**: `aaf_cmd_version_upgrade.mdc`
+
+**功能说明**：
+- 自动识别项目中使用的 AAF 模块
+- 在 AAF 项目中查找各模块的实际版本号
+- 生成详细的版本升级报告
+- 根据实际模块版本更新（不统一版本号）
+- 提供规范的提交信息建议
+
+**支持项目**：
+- mna-application
+- Template-AAF
+- Template_Android
+- Template-Empty
+- 其他使用 AAF 的项目
+
+**重要原则**：不同模块可能有不同版本号，必须逐个查找实际版本，不能统一修改！
+
+---
+
+### 4. 升级示例项目 AAF 版本
 
 **触发关键词**：
 - "升级sample" / "升级Sample"
@@ -161,6 +189,7 @@ git commit -m "feat(rules): 添加 Git 提交规范
 
 | 命令关键词 | 执行规则 | 功能说明 |
 |-----------|---------|----------|
+| `升级 XXX 的 AAF 版本` `更新 AAF 依赖` | `aaf_cmd_version_upgrade.mdc` | 升级指定项目的 AAF 依赖版本 |
 | `添加依赖` `依赖管理` | `aaf_dependency.mdc` | 查看依赖管理规范，指导添加模块依赖 |
 | `添加注释` `注释规范` | `aaf_note.mdc` | 查看注释规范，指导添加代码注释 |
 | `Demo 开发` | `aaf_demo.mdc` | 查看 Demo 项目开发规范 |
@@ -169,6 +198,11 @@ git commit -m "feat(rules): 添加 Git 提交规范
 
 **使用示例：**
 ```
+你: "升级 mna-application 的 AAF 版本"
+   → 自动识别项目使用的 AAF 模块
+   → 查找各模块实际版本
+   → 生成升级报告并执行更新
+
 你: "我要给 LibDownload 添加 LibOkhttpWrapper 依赖"
    → 根据 aaf_dependency.mdc 规则指导正确添加依赖
 
@@ -265,7 +299,8 @@ git commit -m "feat(rules): 添加 Git 提交规范
 ### 最常用命令
 
 | 场景 | 说什么 | 执行什么 |
-|-----|-------|---------|
+|-----|-------|---------| 
+| 升级 AAF 版本 | "升级 mna-application 的 AAF 版本" | AAF 版本升级 |
 | 修改了代码 | "更新文档" | 文档同步检查 |
 | 要发布了 | "发布检查" | 完整发布检查 |
 | 定期检查 | "文档巡检" | 文档完整性检查 |
@@ -447,6 +482,8 @@ aaf_commands.mdc 识别命令
 | `aaf_doc_management.mdc` | 文档管理规则（生成、同步、更新统一管理） |
 | `aaf_doc_inspection.mdc` | 文档巡检规则 |
 | `aaf_release_check.mdc` | 发布前检查规则 |
+| `aaf_cmd_version_upgrade.mdc` | AAF 版本升级规则（自动执行+手动参考） |
+| `aaf_cmd_sample_upgrade.mdc` | 示例项目升级规则 |
 | `aaf_dependency.mdc` | 依赖管理规范 |
 | `aaf_note.mdc` | 注释规范 |
 | `aaf_demo.mdc` | Demo 开发规范 |
