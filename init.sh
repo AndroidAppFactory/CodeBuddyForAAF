@@ -35,11 +35,9 @@ log_prompt() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 
-log_info "========================================"
-log_info "AAF CodeBuddy 初始化脚本"
-log_info "========================================"
-log_info "当前目录: $SCRIPT_DIR"
-log_info "上级目录: $PARENT_DIR"
+echo "========================================"
+echo "AAF CodeBuddy 初始化脚本"
+echo "========================================"
 echo ""
 
 # 项目配置（使用函数代替关联数组，兼容旧版 bash）
@@ -87,22 +85,33 @@ can_git_pull() {
     local project_path="$1"
     
     (
-        [ ! -d "$project_path/.git" ] && exit 1
+        if [ ! -d "$project_path/.git" ]; then
+            exit 1
+        fi
+        
         cd "$project_path" || exit 1
         
         # 检查是否有未提交的修改
-        ! git diff-index --quiet HEAD -- 2>/dev/null && exit 2
+        if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+            exit 2
+        fi
         
         # 获取当前分支
         local current_branch=$(git branch --show-current 2>/dev/null)
-        [ -z "$current_branch" ] && exit 1
+        if [ -z "$current_branch" ]; then
+            exit 1
+        fi
         
         # 检查远程分支是否存在
-        ! git rev-parse --verify "origin/$current_branch" &>/dev/null && exit 1
+        if ! git rev-parse --verify "origin/$current_branch" &>/dev/null; then
+            exit 1
+        fi
         
         # 比较本地和远程的提交数
         local behind=$(git rev-list HEAD..origin/$current_branch --count 2>/dev/null)
-        [ -n "$behind" ] && [ "$behind" -gt 0 ] && exit 0
+        if [ -n "$behind" ] && [ "$behind" -gt 0 ]; then
+            exit 0
+        fi
         
         exit 3  # 已是最新
     )
@@ -113,8 +122,6 @@ can_git_pull() {
 update_project() {
     local project_name="$1"
     local project_path="$2"
-    
-    log_info "正在更新项目: $project_name"
     
     (
         cd "$project_path" || exit 1
@@ -132,10 +139,6 @@ update_project() {
 clone_project_to_parent() {
     local project_name="$1"
     local git_url="$(get_project_git "$project_name")"
-    
-    log_info "正在克隆项目: $project_name"
-    log_info "目标位置: $PARENT_DIR/$project_name"
-    log_info "Git 地址: $git_url"
     
     (
         cd "$PARENT_DIR" || exit 1
@@ -157,9 +160,8 @@ check_and_handle_project() {
     local project_info="$(get_project_info "$project_name")"
     
     echo ""
-    log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    log_info "检查项目: $project_name"
-    log_info "说明: $project_info"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "检查项目: $project_name ($project_info)"
     
     # 检查项目是否存在（仅检查上级目录）
     if [ -d "$project_path" ]; then
@@ -171,11 +173,8 @@ check_and_handle_project() {
         
         case $status in
             0)
-                log_info "发现可用更新"
-                if ask_yes_no "是否更新此项目？"; then
+                if ask_yes_no "发现可用更新，是否更新此项目？"; then
                     update_project "$project_name" "$project_path"
-                else
-                    log_info "跳过更新"
                 fi
                 ;;
             2)
@@ -183,9 +182,6 @@ check_and_handle_project() {
                 ;;
             3)
                 log_success "项目已是最新版本"
-                ;;
-            *)
-                log_info "项目没有 git 支持，跳过更新检查"
                 ;;
         esac
     else
@@ -195,7 +191,7 @@ check_and_handle_project() {
         local should_clone=false
         
         if [ "$is_required" = "true" ]; then
-            log_info "这是必需项目，将自动克隆"
+            echo "这是必需项目，将自动克隆"
             should_clone=true
         else
             if ask_yes_no "是否克隆此项目？"; then
@@ -205,18 +201,17 @@ check_and_handle_project() {
         
         if [ "$should_clone" = "true" ]; then
             clone_project_to_parent "$project_name"
-        else
-            log_info "跳过克隆: $project_name"
         fi
     fi
+    
+    sleep 1
 }
 
 # 创建 AAF-Temp Demo 项目
 create_aaf_temp() {
     echo ""
-    log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    log_info "创建 AAF-Temp Demo 项目"
-    log_info "说明: 内部临时开发项目，从 Template-Empty 复制而来"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "创建 AAF-Temp Demo 项目（内部临时开发）"
     
     local aaf_temp_path="$SCRIPT_DIR/AAF-Temp"
     
@@ -234,8 +229,6 @@ create_aaf_temp() {
     fi
     
     local template_source="$PARENT_DIR/Template-Empty"
-    log_info "从以下位置复制: $template_source"
-    log_info "目标位置: $aaf_temp_path"
     
     # 复制项目
     if ! cp -r "$template_source" "$aaf_temp_path"; then
@@ -246,7 +239,9 @@ create_aaf_temp() {
     log_success "成功创建 AAF-Temp 项目"
     
     # 移除 .git 目录
-    [ -d "$aaf_temp_path/.git" ] && rm -rf "$aaf_temp_path/.git" && log_info "已移除 git 支持"
+    if [ -d "$aaf_temp_path/.git" ]; then
+        rm -rf "$aaf_temp_path/.git"
+    fi
     
     # 添加到 .gitignore
     if [ -f "$SCRIPT_DIR/.gitignore" ]; then
@@ -256,9 +251,7 @@ create_aaf_temp() {
         fi
     fi
     
-    log_success "AAF-Temp 创建完成"
-    log_info "位置: $aaf_temp_path"
-    log_info "用途: 临时开发测试，可随意修改"
+    sleep 1
 }
 
 # 初始化项目配置
@@ -266,9 +259,9 @@ init_project_config() {
     local project_name="$1"
     local project_path="$2"
     
-    [ ! -d "$project_path" ] && return 0
-    
-    log_info "初始化项目配置: $project_name"
+    if [ ! -d "$project_path" ]; then
+        return 0
+    fi
     
     (
         cd "$project_path" || exit 1
@@ -277,25 +270,25 @@ init_project_config() {
         if [ ! -f "local.properties" ]; then
             if [ -n "$ANDROID_HOME" ]; then
                 echo "sdk.dir=$ANDROID_HOME" > local.properties
-                log_success "已创建 local.properties"
+                log_success "[$project_name] 已创建 local.properties"
             elif [ -n "$ANDROID_SDK_ROOT" ]; then
                 echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
-                log_success "已创建 local.properties"
+                log_success "[$project_name] 已创建 local.properties"
             else
-                log_warning "未设置 ANDROID_HOME，请手动配置 local.properties"
+                log_warning "[$project_name] 未设置 ANDROID_HOME，请手动配置 local.properties"
             fi
         fi
         
         # 设置 gradlew 可执行权限
-        [ -f "gradlew" ] && chmod +x gradlew && log_success "已设置 gradlew 可执行权限"
+        [ -f "gradlew" ] && chmod +x gradlew
     )
 }
 
 # 检查开发环境
 check_environment() {
     echo ""
-    log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    log_info "检查开发环境"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "检查开发环境"
     
     # 检查 Java
     if command -v java &> /dev/null; then
@@ -319,6 +312,8 @@ check_environment() {
     else
         log_error "未找到 Git"
     fi
+    
+    sleep 1
 }
 
 # 主执行流程
@@ -329,8 +324,8 @@ main() {
     check_environment
     
     echo ""
-    log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    log_info "开始检查和初始化 AAF 项目"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "开始检查和初始化 AAF 项目"
     
     # 1. 检查 AndroidAppFactory（必需）
     check_and_handle_project "AndroidAppFactory" true
@@ -351,8 +346,8 @@ main() {
     create_aaf_temp
     
     echo ""
-    log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    log_info "初始化项目配置"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "初始化项目配置"
     
     # 初始化各项目配置
     init_project_config "AndroidAppFactory" "$PARENT_DIR/AndroidAppFactory"
@@ -361,27 +356,29 @@ main() {
     init_project_config "Template-AAF" "$PARENT_DIR/Template-AAF"
     init_project_config "AAF-Temp" "$SCRIPT_DIR/AAF-Temp"
     
+    sleep 1
+    
     echo ""
-    log_info "========================================"
+    echo "========================================"
     log_success "初始化完成！"
-    log_info "========================================"
+    echo "========================================"
     
     echo ""
-    log_info "项目布局："
-    log_info "  $PARENT_DIR/"
-    log_info "  ├── AndroidAppFactory/        (AAF 核心框架)"
-    log_info "  ├── AndroidAppFactory-Doc/    (AAF 文档)"
-    log_info "  ├── Template-Empty/           (Sample: 最简示例)"
-    log_info "  ├── Template_Android/         (Sample: 基础示例)"
-    log_info "  ├── Template-AAF/             (Sample: 完整示例)"
-    log_info "  └── CodeBuddyForAAF/"
-    log_info "      └── AAF-Temp/             (Demo: 内部开发)"
+    echo "项目布局："
+    echo "  $PARENT_DIR/"
+    echo "  ├── AndroidAppFactory/        (AAF 核心框架)"
+    echo "  ├── AndroidAppFactory-Doc/    (AAF 文档)"
+    echo "  ├── Template-Empty/           (Sample: 最简示例)"
+    echo "  ├── Template_Android/         (Sample: 基础示例)"
+    echo "  ├── Template-AAF/             (Sample: 完整示例)"
+    echo "  └── CodeBuddyForAAF/"
+    echo "      └── AAF-Temp/             (Demo: 内部开发)"
     
     echo ""
-    log_info "接下来可以："
-    log_info "  1. 在 AAF-Temp 项目中开始开发（临时开发项目）"
-    log_info "  2. 参考 README.md 了解详细开发流程"
-    log_info "  3. Sample 项目供学习参考，不要直接修改"
+    echo "接下来可以："
+    echo "  1. 在 AAF-Temp 项目中开始开发（临时开发项目）"
+    echo "  2. 参考 README.md 了解详细开发流程"
+    echo "  3. Sample 项目供学习参考，不要直接修改"
     
     cd "$SCRIPT_DIR"
 }
