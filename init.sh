@@ -1,9 +1,6 @@
 #!/bin/bash
 # author code@bihe0832.com
-# CodeBuddyForAAF 初始化脚本（优化版）
-
-# 不使用 set -e，因为我们需要自己处理返回值
-# set -e
+# CodeBuddyForAAF 初始化脚本
 
 # 颜色定义
 RED='\033[0;31m'
@@ -39,7 +36,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 
 log_info "========================================"
-log_info "AAF CodeBuddy 初始化脚本（优化版）"
+log_info "AAF CodeBuddy 初始化脚本"
 log_info "========================================"
 log_info "当前目录: $SCRIPT_DIR"
 log_info "上级目录: $PARENT_DIR"
@@ -90,34 +87,22 @@ can_git_pull() {
     local project_path="$1"
     
     (
-        if [ ! -d "$project_path/.git" ]; then
-            exit 1
-        fi
-        
+        [ ! -d "$project_path/.git" ] && exit 1
         cd "$project_path" || exit 1
         
         # 检查是否有未提交的修改
-        if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-            exit 2  # 有未提交的修改
-        fi
+        ! git diff-index --quiet HEAD -- 2>/dev/null && exit 2
         
-        # 快速检查远程分支（不实际 fetch）
+        # 获取当前分支
         local current_branch=$(git branch --show-current 2>/dev/null)
-        if [ -z "$current_branch" ]; then
-            exit 1  # 无法获取当前分支
-        fi
+        [ -z "$current_branch" ] && exit 1
         
         # 检查远程分支是否存在
-        if ! git rev-parse --verify "origin/$current_branch" &>/dev/null; then
-            exit 1  # 远程分支不存在
-        fi
+        ! git rev-parse --verify "origin/$current_branch" &>/dev/null && exit 1
         
         # 比较本地和远程的提交数
         local behind=$(git rev-list HEAD..origin/$current_branch --count 2>/dev/null)
-        
-        if [ -n "$behind" ] && [ "$behind" -gt 0 ]; then
-            exit 0  # 可以更新
-        fi
+        [ -n "$behind" ] && [ "$behind" -gt 0 ] && exit 0
         
         exit 3  # 已是最新
     )
@@ -132,17 +117,15 @@ update_project() {
     log_info "正在更新项目: $project_name"
     
     (
-        cd "$project_path" || return 1
+        cd "$project_path" || exit 1
         
         if git pull; then
             log_success "成功更新项目: $project_name"
-            return 0
         else
             log_error "更新项目失败: $project_name"
-            return 1
+            exit 1
         fi
     )
-    return $?
 }
 
 # 克隆项目到上级目录
@@ -155,17 +138,15 @@ clone_project_to_parent() {
     log_info "Git 地址: $git_url"
     
     (
-        cd "$PARENT_DIR" || return 1
+        cd "$PARENT_DIR" || exit 1
         
         if git clone "$git_url"; then
             log_success "成功克隆项目: $project_name"
-            return 0
         else
             log_error "克隆项目失败: $project_name"
-            return 1
+            exit 1
         fi
     )
-    return $?
 }
 
 # 检查并处理单个项目
@@ -187,9 +168,6 @@ check_and_handle_project() {
         # 检查是否可以更新
         can_git_pull "$project_path"
         local status=$?
-        
-        # DEBUG: 显示状态码
-        # echo "DEBUG: can_git_pull returned status=$status"
         
         case $status in
             0)
@@ -249,45 +227,38 @@ create_aaf_temp() {
     fi
     
     # 查找 Template-Empty 源
-    local template_source=""
-    if [ -d "$PARENT_DIR/Template-Empty" ]; then
-        template_source="$PARENT_DIR/Template-Empty"
-    else
+    if [ ! -d "$PARENT_DIR/Template-Empty" ]; then
         log_error "找不到 Template-Empty 项目"
         log_error "请先克隆 Template-Empty 项目到上级目录"
         return 1
     fi
     
+    local template_source="$PARENT_DIR/Template-Empty"
     log_info "从以下位置复制: $template_source"
     log_info "目标位置: $aaf_temp_path"
     
     # 复制项目
-    if cp -r "$template_source" "$aaf_temp_path"; then
-        log_success "成功创建 AAF-Temp 项目"
-        
-        # 移除 .git 目录
-        if [ -d "$aaf_temp_path/.git" ]; then
-            rm -rf "$aaf_temp_path/.git"
-            log_info "已移除 git 支持"
-        fi
-        
-        # 添加到 .gitignore
-        if [ -f "$SCRIPT_DIR/.gitignore" ]; then
-            if ! grep -q "^AAF-Temp/$" "$SCRIPT_DIR/.gitignore"; then
-                echo "AAF-Temp/" >> "$SCRIPT_DIR/.gitignore"
-                log_success "已将 AAF-Temp/ 添加到 .gitignore"
-            fi
-        fi
-        
-        log_success "AAF-Temp 创建完成"
-        log_info "位置: $aaf_temp_path"
-        log_info "用途: 临时开发测试，可随意修改"
-        
-        return 0
-    else
+    if ! cp -r "$template_source" "$aaf_temp_path"; then
         log_error "创建 AAF-Temp 失败"
         return 1
     fi
+    
+    log_success "成功创建 AAF-Temp 项目"
+    
+    # 移除 .git 目录
+    [ -d "$aaf_temp_path/.git" ] && rm -rf "$aaf_temp_path/.git" && log_info "已移除 git 支持"
+    
+    # 添加到 .gitignore
+    if [ -f "$SCRIPT_DIR/.gitignore" ]; then
+        if ! grep -q "^AAF-Temp/$" "$SCRIPT_DIR/.gitignore"; then
+            echo "AAF-Temp/" >> "$SCRIPT_DIR/.gitignore"
+            log_success "已将 AAF-Temp/ 添加到 .gitignore"
+        fi
+    fi
+    
+    log_success "AAF-Temp 创建完成"
+    log_info "位置: $aaf_temp_path"
+    log_info "用途: 临时开发测试，可随意修改"
 }
 
 # 初始化项目配置
@@ -295,14 +266,12 @@ init_project_config() {
     local project_name="$1"
     local project_path="$2"
     
-    if [ ! -d "$project_path" ]; then
-        return 0
-    fi
+    [ ! -d "$project_path" ] && return 0
     
     log_info "初始化项目配置: $project_name"
     
     (
-        cd "$project_path" || return 1
+        cd "$project_path" || exit 1
         
         # 创建 local.properties
         if [ ! -f "local.properties" ]; then
@@ -318,10 +287,7 @@ init_project_config() {
         fi
         
         # 设置 gradlew 可执行权限
-        if [ -f "gradlew" ]; then
-            chmod +x gradlew
-            log_success "已设置 gradlew 可执行权限"
-        fi
+        [ -f "gradlew" ] && chmod +x gradlew && log_success "已设置 gradlew 可执行权限"
     )
 }
 
