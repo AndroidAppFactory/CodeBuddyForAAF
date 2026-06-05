@@ -37,7 +37,7 @@ provider: zixie(code@bihe0832)
 
 ### Step 1: 模块版本号检查
 
-从 `dependencies.gradle` 的 `ext.moduleVersionName` 读取当前版本，与最新 `Tag_AAF_*` Tag 对比。当前版本必须大于上次版本。版本格式：`主版本号.次版本号.修订号`。
+从 `dependencies.gradle` 的 `ext.moduleVersionName` 读取当前版本，与最新 Tag 对比（匹配 `tag/Tag_AAF_*` 或 `Tag_AAF_*`，优先前者）。当前版本必须大于上次版本。版本格式：`主版本号.次版本号.修订号`。
 
 ### Step 2: 文档同步检查
 
@@ -71,7 +71,7 @@ provider: zixie(code@bihe0832)
 
 ## 版本 Tag 检查
 
-Tag 命名规则：`Tag_AAF_x.y.z`。检查当前版本号对应的 Tag 是否已存在：
+Tag 命名规则：`tag/Tag_AAF_x.y.z`（旧格式 `Tag_AAF_x.y.z` 也兼容）。检查当前版本号对应的 Tag 是否已存在：
 - Tag 不存在 → 正常，待发布后创建
 - Tag 已存在 → 版本号可能未更新
 
