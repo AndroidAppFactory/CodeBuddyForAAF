@@ -1,0 +1,17 @@
+name: aaf-sample-upgrade
+version: 3
+category: aaf
+type: workflow
+
+modes: [ide, cli]
+
+# 编排层：调度 aaf-sample-apply CLI 完成三个项目升级
+cli_tool: aaf
+cli_commands:
+  - sample-check
+  - sample-apply
+
+# Agent 子代理依赖
+agents:
+  - aaf-project-finder
+  - aaf-config-reader

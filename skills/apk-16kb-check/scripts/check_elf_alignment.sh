@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 progname="${0##*/}"
 progname="${progname%.sh}"
 
@@ -60,7 +61,9 @@ if [[ "${dir}" == *.apk ]]; then
   fi
 
   dir_filename=$(basename "${dir}")
-  tmp=$(mktemp -d -t "${dir_filename%.apk}_out_XXXXX")
+  _zixie_tmp="${ZIXIEKIT_TMP:-$HOME/.zixiekit}"
+  mkdir -p "${_zixie_tmp}/skill/apk-16kb-check"
+  tmp=$(mktemp -d --tmpdir="${_zixie_tmp}/skill/apk-16kb-check" "${dir_filename%.apk}_out_XXXXX")
   unzip "${dir}" lib/* -d "${tmp}" >/dev/null 2>&1
   dir="${tmp}"
 fi
@@ -73,7 +76,9 @@ if [[ "${dir}" == *.apex ]]; then
   echo
 
   dir_filename=$(basename "${dir}")
-  tmp=$(mktemp -d -t "${dir_filename%.apex}_out_XXXXX")
+  _zixie_tmp="${ZIXIEKIT_TMP:-$HOME/.zixiekit}"
+  mkdir -p "${_zixie_tmp}/skill/apk-16kb-check"
+  tmp=$(mktemp -d --tmpdir="${_zixie_tmp}/skill/apk-16kb-check" "${dir_filename%.apex}_out_XXXXX")
   deapexer extract "${dir}" "${tmp}" || { echo "Failed to deapex." && exit 1; }
   dir="${tmp}"
 fi

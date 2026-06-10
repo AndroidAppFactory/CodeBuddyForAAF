@@ -8,8 +8,14 @@ AAR → APK 构建（保留备用）：将 AAR 编译为 APK 用于 zipalign 验
 import os
 import subprocess
 import shutil
+import sys
 from typing import List, Optional, Tuple
 from pathlib import Path
+
+# 加载环境变量（~/.zixiekit/bootstrap.py 由 zk init 部署）
+sys.path.insert(0, str(Path.home() / ".zixiekit"))
+from bootstrap import load_env  # noqa: E402
+load_env()
 
 from models import Colors
 

@@ -1,0 +1,6 @@
+name: aaf-doc-management
+version: 1
+category: aaf
+type: skill
+
+modes: [ide]

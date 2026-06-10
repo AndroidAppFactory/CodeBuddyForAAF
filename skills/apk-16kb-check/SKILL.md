@@ -1,19 +1,21 @@
 ---
+version: 1
 name: apk-16kb-check
-description: APK/AAB/AAR/工程目录 16KB 页面对齐检查助手 - 使用官方工具检查是否符合 Google Play 16KB 页面大小要求。支持 APK 直接检查、AAB 转 APK 后检查、AAR 直接解压检查 ELF 段、Android 工程目录自动构建后检查，失败时自动尝试修复。当用户说"Android 16KB"、"安卓 16KB"、"检查 16KB 对齐"时使用此 skill。
+description: APK/AAB/AAR/工程目录 16KB 页面对齐检查助手 - 使用官方工具检查是否符合 Google Play 16KB 页面大小要求。支持 APK 直接检查、AAB 转 APK 后检查、AAR 直接解压检查 ELF 段、Android 工程目录自动构建后检查，失败时自动尝试修复。
+disable-model-invocation: true
 ---
 
 # APK/AAB/AAR/工程目录 16KB 页面对齐检查助手
 
 > **背景**：自 2025 年 11 月 1 日起，Google Play 要求所有以 Android 15 (API 35) 及以上为目标的应用必须支持 16KB 页面大小。
 
-## 触发关键词
+## 触发方式
 
-"Android 16KB"、"安卓 16KB"、"检查 16KB 对齐"、"16KB alignment"、"页面大小检查"、"检查 AAR/AAB/工程 16KB"
+`/apk.16kb`（仅 slash 命令触发，不响应自然语言）
 
 ## 前置检查
 
-1. 读取 `.env` 文件获取 `WORK_ROOT`（缺失则 fallback 到 `$HOME`）
+1. 读取 `~/.zixiekit/.env` 文件获取 `WORK_ROOT`（缺失则 fallback 到 `$HOME`）
 2. AAB 模式需要 `bundletool`（[GitHub Releases](https://github.com/google/bundletool/releases)）
 3. 工程目录模式需要 Java/Gradle/SDK 环境就绪
 
@@ -94,12 +96,12 @@ zipalign 失败 → 自动修复（仅 APK 模式）
 
 ```bash
 # 1. 解压 AAB 提取 .so 做 ELF 段检查
-unzip -o app.aab -d /tmp/aab_extract/
+unzip -o app.aab -d ${ZIXIEKIT_TMP}/apk-16kb-check/aab_extract/
 # .so 位于 base/lib/{abi}/ 下
 
 # 2. 用 bundletool 转 universal APK 做 zipalign 检查
 java -jar bundletool.jar build-apks --bundle=app.aab --output=app.apks --mode=universal
-unzip app.apks -d /tmp/apks/
+unzip app.apks -d ${ZIXIEKIT_TMP}/apk-16kb-check/apks/
 # 对 universal.apk 调用 check_alignment.py
 ```
 

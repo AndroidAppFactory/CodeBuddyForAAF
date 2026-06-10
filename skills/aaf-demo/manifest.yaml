@@ -1,0 +1,12 @@
+name: aaf-demo
+version: 1
+category: aaf
+type: skill
+
+modes: [ide]
+
+triggers:
+  - "demo"
+  - "AAF-Temp"
+  - "自动运行"
+  - "调试运行"
