@@ -1,4 +1,4 @@
-# CodeBuddyForAAF
+# VibeCodingForAAF
 
 AAF（AndroidAppFactory）开发辅助工具集，由 [ZixieKit](https://github.com/bihe0832/ZixieKit) 自动同步。
 
@@ -7,7 +7,7 @@ AAF（AndroidAppFactory）开发辅助工具集，由 [ZixieKit](https://github.
 ## 目录结构
 
 ```
-CodeBuddyForAAF/
+VibeCodingForAAF/
 ├── skills/          # 14 个 Skill
 │   ├── aaf-demo/                # AAF Demo 开发助手
 │   ├── aaf-doc-generator/       # AAF 文档生成
@@ -40,27 +40,6 @@ CodeBuddyForAAF/
 ├── tools/           # 可执行工具
 │   └── aafkit/                  # AAF CLI 工具包
 └── scripts/         # 共享脚本（依赖注入）
-```
-
----
-
-## 使用方式
-
-### 作为 CodeBuddy Skill 使用
-
-将本仓库作为 CodeBuddy 项目打开，对话中直接提及对应 Skill 的触发关键词即可唤起。
-
-### 直接运行工具
-
-```bash
-# APK 16KB 对齐检查
-python3 skills/apk-16kb-check/scripts/check_alignment.py <APK/AAB/AAR 路径>
-
-# APK 包大小分析
-python3 skills/apk-size-analyzer/scripts/analyze_apk.py <APK 路径>
-
-# AAF CLI 工具
-python3 -m tools.aafkit
 ```
 
 ---
