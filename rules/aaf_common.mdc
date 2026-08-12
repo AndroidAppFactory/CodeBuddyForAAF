@@ -1,0 +1,62 @@
+---
+description: AAF 通用规范 - AAF 框架基本概念、项目定位策略、模块源码查找方法
+alwaysApply: true
+enabled: true
+provider: zixie(code@bihe0832)
+ZixieKit-version: 1
+---
+
+# AAF 通用规范
+
+> **触发条件**：分析、修改、审查基于 AAF（AndroidAppFactory）框架的项目时触发。
+
+## 检查清单
+
+| # | 检查项 | 必须 | 对应章节 |
+|---|--------|:----:|----------|
+| 1 | 查看 AAF 源码前先通过 `AAF_HOME` 定位项目，不反编译 | 是 | AAF 基本概念 |
+| 2 | 找不到模块时通过 `dependencies_*.gradle` 查 ModuleName → ArtifactId → 源码目录 | 是 | 模块源码查找 |
+| 3 | AAF 核心项目不存在时终止操作并报错 | 是 | 项目定位策略 |
+
+---
+
+## AAF 基本概念
+
+### 什么是 AAF
+
+AAF（AndroidAppFactory）是一个 Android 组件化框架，GroupId 为 `com.bihe0832.android`，所有模块以 Maven artifact 形式发布。基于 AAF 开发的项目通过 `implementation "com.bihe0832.android:<artifactId>:<version>"` 引用模块，不需要源码依赖。
+
+### 核心项目
+
+所有 AAF 相关项目统一存放在 `AAF_HOME` 环境变量指向的目录下：
+
+```
+$AAF_HOME/
+├── AndroidAppFactory        ← 框架核心（必须存在，所有模块源码在此）
+├── AndroidAppFactory-Doc    ← 框架文档（可选）
+├── Template-AAF             ← 完整示例项目（可选）
+├── Template_Android         ← 基础示例项目（可选）
+└── Template-Empty           ← 最简示例项目（可选）
+```
+
+### 项目定位策略
+
+1. 读取环境变量 `AAF_HOME`（配置于 `~/.zixiekit/.env`）
+2. 验证 `$AAF_HOME/AndroidAppFactory` 目录存在且包含 `build.gradle` / `settings.gradle`
+3. **AndroidAppFactory 找不到 → 报错终止，不继续**
+
+---
+
+## 模块源码查找
+
+查找 AAF 模块源码时必须通过 `dependencies_*.gradle` 建立 ModuleName → ArtifactId 映射，**禁止凭猜测**。
+
+详细操作步骤（三步查找法、配置文件映射表、命名转换规则、排除规则）见 Skill：`aaf-project-finder`。
+
+---
+
+## 禁止行为
+
+1. **禁止**反编译 AAF 的 AAR/JAR 包来查看源码（已有源码可直接查看）
+2. **禁止**凭猜测将 artifactId 映射到模块目录（必须通过 `dependencies_*.gradle` 验证）
+3. **禁止**在 `AAF_HOME` 未配置时跳过查找直接报"找不到"（应提示用户配置环境变量）
