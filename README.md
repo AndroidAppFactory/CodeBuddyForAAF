@@ -1,17 +1,6 @@
 # CodeBuddyForAAF
 
-AAF（AndroidAppFactory）开发辅助工具集。
-
----
-
-## 功能概览
-
-- **APK 16KB 对齐检查**：检查 APK/AAB/AAR 是否符合 Google Play 16KB 页面大小要求。
-- **AAF 代码调试**（Skill）：AAF 模块智能识别 + 日志调试流程。
-- **AAF Sample 升级**（Skill）：升级 Template-AAF / Template_Android / Template-Empty 到最新 AAF 框架版本。
-- **ADB 端口释放**（Skill）：一键排查并释放 5037 端口占用。
-- **AAF 规则集**（Rules）：AAF 发布检查、版本升级、文档管理、依赖规范等命令路由与规范。
-- **AAF Agents**：AAF 专属的配置解析、文档生成、项目定位、Sample 更新 Agent。
+AAF（AndroidAppFactory）开发辅助工具集，由 [ZixieKit](https://github.com/bihe0832/ZixieKit) 自动同步。
 
 ---
 
@@ -19,41 +8,60 @@ AAF（AndroidAppFactory）开发辅助工具集。
 
 ```
 CodeBuddyForAAF/
-├── skills/                # Skill 定义和脚本
-│   ├── apk-16kb-check/    # 含可执行检查脚本（scripts/）
-│   ├── aaf-debug/
-│   ├── aaf-sample-upgrade/
-│   └── adb-port-killer/
-├── rules/                 # AAF 专属规则（*.mdc）
-└── agents/                # AAF 专属 Agents（*.md）
+├── skills/          # 14 个 Skill
+│   ├── aaf-demo/                # AAF Demo 开发助手
+│   ├── aaf-doc-generator/       # AAF 文档生成
+│   ├── aaf-doc-management/      # AAF 文档管理
+│   ├── aaf-project-finder/      # AAF 项目定位
+│   ├── aaf-release-check/       # AAF 发布前检查
+│   ├── aaf-sample-apply/        # AAF Sample 升级
+│   ├── aaf-sample-upgrade/      # AAF Sample 项目升级
+│   ├── aaf-version-reader/      # AAF 版本信息读取
+│   ├── aaf-version-upgrade/     # AAF 依赖版本升级
+│   ├── adb-port-killer/         # ADB 端口释放
+│   ├── android-debug/           # Android 调试
+│   ├── android-log/             # Android 日志分析
+│   ├── apk-16kb-check/          # APK 16KB 对齐检查
+│   └── apk-size-analyzer/       # APK 包大小分析
+├── commands/        # 11 个 CLI 命令
+│   ├── aaf.release.md           # AAF 发布检查
+│   ├── aaf.update.md            # AAF 版本升级
+│   ├── aaf.version.reader.md    # 读取 AAF 版本信息
+│   ├── aaf.version.update.md    # 更新 AAF 版本
+│   ├── adb.replay.edit.md       # ADB 回放编辑器
+│   ├── adb.replay.play.md       # ADB 回放执行
+│   ├── adb.replay.record.md     # ADB 录制
+│   ├── android.16kb.md          # 16KB 对齐检查
+│   ├── android.apksize.md       # APK 包大小分析
+│   ├── android.debug.md         # Android 调试
+│   └── android.log.md           # Android 日志
+├── rules/           # AAF 通用规则
+│   └── aaf_common.mdc
+├── tools/           # 可执行工具
+│   └── aafkit/                  # AAF CLI 工具包
+└── scripts/         # 共享脚本（依赖注入）
 ```
 
 ---
 
 ## 使用方式
 
-### 1. 直接运行可执行脚本
+### 作为 CodeBuddy Skill 使用
 
-目前仅 `apk-16kb-check` 提供可独立运行的脚本：
+将本仓库作为 CodeBuddy 项目打开，对话中直接提及对应 Skill 的触发关键词即可唤起。
+
+### 直接运行工具
 
 ```bash
+# APK 16KB 对齐检查
 python3 skills/apk-16kb-check/scripts/check_alignment.py <APK/AAB/AAR 路径>
+
+# APK 包大小分析
+python3 skills/apk-size-analyzer/scripts/analyze_apk.py <APK 路径>
+
+# AAF CLI 工具
+python3 -m tools.aafkit
 ```
-
-### 2. 作为 CodeBuddy / Claude Skill 使用
-
-将本仓库的 `skills/*/SKILL.md`、`rules/*.mdc`、`agents/*.md` 作为对应资源加载，或参考 `skills/*/SKILL.md` 的触发关键词在对话中直接唤起。
-
----
-
-## 更新机制
-
-本仓库由 [AIConfig](https://github.com/bihe0832/AIConfig) 自动同步。每次在 AIConfig 提交相关 skill / rule / agent 变更后，post-commit hook 会自动把最新内容推送到本仓库。
-
-同步范围：
-- `AIConfig/skills/aaf/*` 和 `AIConfig/skills/dev/adb-port-killer` → `skills/`
-- `AIConfig/rules/aaf/aaf_*.mdc` → `rules/`
-- `AIConfig/agents/aaf-*.md` → `agents/`
 
 ---
 
