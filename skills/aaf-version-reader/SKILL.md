@@ -1,17 +1,30 @@
 ---
+
+
 version: 1
+category: aaf
 name: aaf-version-reader
-description: 读取 AAF 框架最新配置和版本信息。从 $AAF_HOME/AndroidAppFactory 提取 SDK 配置、版本号等结构化数据。
+description: 读取 AAF 框架最新配置和版本信息。从 $AAF_HOME/AndroidAppFactory 提取 SDK 配置、版本号等结构化数据。当用户说"提取 AAF 配置"、"提取AAF版本号"时使用此 skill
+
+
 ---
 
 # AAF Version Reader
 
+> **AI 必须逐项检查以下清单，禁止跳过或自编检查项。**
+
+| # | 检查项 | 必须 | 对应章节 |
+|---|--------|:----:|----------|
+| 1 | 每个模块独立查询版本，禁止假设所有模块相同 | 是 | 读取内容 |
+| 2 | 禁止用 git tag 推断版本 | 是 | 读取内容 |
+| 3 | 用户追问时回 AAF 源码交叉验证 | 是 | 读取内容 |
+| 4 | module key 必须在源文件中实际搜索，禁止推导 | 是 | 读取内容 |
+| 5 | 禁止在模块 `build.gradle` 中添加依赖 | 是 | 返回格式 |
+| 6 | 依赖关系必须单向，禁止循环依赖 | 是 | 返回格式 |
+
 ## 前置条件
 
-- 环境变量 `AAF_HOME` 已在 `~/.zixiekit/.env` 中配置
-- `$AAF_HOME/AndroidAppFactory` 目录存在
-
-找不到则报错终止。
+- 项目定位：通过 `aaf-project-finder` Skill 定位（`$AAF_HOME/AndroidAppFactory`），找不到则报错终止
 
 ## 读取内容
 
@@ -36,14 +49,9 @@ git status --short
 
 ### 3. 模块版本
 
-从 `dependencies_*.gradle` 文件中按 artifactId 查找各模块版本：
+> `dependencies_*.gradle` 文件与模块类型的映射关系见 `aaf-project-finder` Skill。
 
-| 模块类型 | 版本定义文件 |
-|---------|------------|
-| 通用公共组件（common-*） | `dependencies_common.gradle` |
-| 基础 Lib（lib-*） | `dependencies_lib.gradle` |
-| 其他分类模块 | 按前缀在对应 `dependencies_*.gradle` 中搜索 |
-| 已废弃模块 | `dependencies_deprecated.gradle` |
+从 `dependencies_*.gradle` 文件中按 artifactId 查找各模块版本。
 
 查找方法（兼容两种输入格式）：
 
@@ -104,15 +112,7 @@ grep -A 3 '"LibDownload"' dependencies_*.gradle | grep '"version"'
 ]
 ```
 
-**配置文件选择**：
-
-| 模块类型 | 配置文件 |
-|---------|---------|
-| Lib 基础库 | `dependencies_lib.gradle` |
-| Common 公共组件 | `dependencies_common.gradle` |
-| 服务组件 | `dependencies_services.gradle` |
-| TBS 相关 | `dependencies_tbs.gradle` |
-| 已废弃模块 | `dependencies_deprecated.gradle` |
+**配置文件选择**：见 `aaf-project-finder` Skill 中的"模块类型与配置文件映射"。
 
 ### 4. 目标项目对比（可选）
 

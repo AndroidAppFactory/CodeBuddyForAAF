@@ -12,6 +12,7 @@ from pathlib import Path
 
 from models import CheckResult, ZipalignEntry, Colors
 from checker_common import find_check_elf_script
+from so_source_analyzer import is_agp_below, get_agp_tier
 
 
 # ============================================================================
@@ -82,7 +83,18 @@ def print_result(result: CheckResult) -> None:
         print(f"{c.RED}📦 压缩存储（必须改为 stored）:{c.NC}")
         for name in sorted(result.compressed_so_names):
             print(f"  {c.RED}• {name} — 被压缩存储，无法被系统 mmap{c.NC}")
-        print(f"{c.YELLOW}  修复: 在 build.gradle 中设置 android.packagingOptions.jniLibs.useLegacyPackaging = false{c.NC}")
+        print(f"{c.YELLOW}  修复: 在 build.gradle 中设置 useLegacyPackaging（AGP ≥ 8.5.1 用 false，AGP < 8.5.1 用 true）{c.NC}")
+        print()
+
+    # APK 全部通过时的 APK vs AAB 差异提示（非 AAR、非 SO 模式）
+    is_aar = bool(result.source_aar_paths)
+    is_so = (result.zipalign.status == "exempt" and result.zipalign.summary == "SO 文件无需 zipalign 检查")
+    all_pass = (result.zipalign.status != "fail" and result.elf_failed == 0 and not result.has_compressed_so)
+    if all_pass and not is_aar and not is_so:
+        print(f"{c.CYAN}💡 注意：本地独立 APK 对齐通过 ≠ 该项目发布用的 .aab 对齐{c.NC}")
+        print(f"{c.CYAN}   assembleRelease 直接产出的 APK 与 bundleRelease → bundletool 生成的 universal/split APK 走的是不同打包路径。{c.NC}")
+        print(f"{c.CYAN}   即使本地 APK 的 ELF 段对齐正常，bundletool 生成的分发 APK 仍可能出现 ZIP 层 offset 未按 16K 对齐。{c.NC}")
+        print(f"{c.CYAN}   建议：如果项目通过 Google Play AAB 分发，请额外检查 bundletool 生成的 APK。{c.NC}")
         print()
 
     # 官方 zipalign 验证结果
@@ -209,6 +221,40 @@ def print_result(result: CheckResult) -> None:
             print(f" {c.YELLOW}SO 文件检查结果{c.NC}")
         else:
             print(f" {c.YELLOW}APK 中未找到 .so 文件{c.NC}")
+        print()
+
+    # AGP 版本 / useLegacyPackaging 修复方案（统一放在检查结果之后）
+    if result.agp_version:
+        tier = get_agp_tier(result.agp_version)
+        print("=" * 44)
+        print(" AGP / bundletool 兼容性")
+        print("=" * 44)
+        if result.agp_config_source:
+            print(f" 配置来源: {result.agp_config_source}")
+        if tier == "8.5.1+":
+            print(f" {c.GREEN}✅ AGP {result.agp_version} ≥ 8.5.1，bundletool zipalign 缺陷已官方修复{c.NC}")
+            if result.use_legacy_packaging is False:
+                print(f" {c.GREEN}   useLegacyPackaging = false（官方根治方案，非压缩存储 + 正确对齐）{c.NC}")
+        elif tier == "8.3-8.5":
+            if result.use_legacy_packaging is True:
+                print(f" {c.GREEN}✅ AGP {result.agp_version}（8.3~8.5 区间），已设置 useLegacyPackaging = true 规避 bundletool 缺陷{c.NC}")
+                print(f" {c.YELLOW}   提示: 升级 AGP ≥ 8.5.1 后可改为 false（官方根治方案）{c.NC}")
+            else:
+                print(f" {c.RED}⚠️  已知坑：AGP {result.agp_version}（8.3~8.5 区间），且未设置 useLegacyPackaging = true{c.NC}")
+                print(f" {c.RED}   本地打包对齐正常，但 bundletool 从 .aab 构建分发 APK 时存在 zipalign 缺陷{c.NC}")
+                print(f" {c.YELLOW}   必须项: 在 build.gradle 中设置 useLegacyPackaging = true{c.NC}")
+                print(f" {c.YELLOW}   根治方案: 升级 AGP ≥ 8.5.1{c.NC}")
+        elif tier == "<8.3":
+            if result.use_legacy_packaging is True:
+                print(f" {c.GREEN}✅ AGP {result.agp_version}（< 8.3），已设置 useLegacyPackaging = true 规避 bundletool 缺陷{c.NC}")
+                print(f" {c.YELLOW}   提示: 还需确认 gradle.properties 中有 android.bundle.enableUncompressedNativeLibs=false{c.NC}")
+                print(f" {c.YELLOW}   根治方案: 升级 AGP ≥ 8.5.1{c.NC}")
+            else:
+                print(f" {c.RED}⚠️  已知坑：AGP {result.agp_version}（< 8.3），存在 bundletool zipalign 缺陷{c.NC}")
+                print(f" {c.RED}   bundletool 从 .aab 构建的分发 APK 可能出现 zipalign 未按 16K 对齐{c.NC}")
+                print(f" {c.YELLOW}   必须项 1: 在 build.gradle 中设置 useLegacyPackaging = true{c.NC}")
+                print(f" {c.YELLOW}   必须项 2: 在 gradle.properties 中加 android.bundle.enableUncompressedNativeLibs=false{c.NC}")
+                print(f" {c.YELLOW}   根治方案: 升级 AGP ≥ 8.5.1{c.NC}")
         print()
 
 

@@ -1,10 +1,14 @@
 ---
-version: 1
-name: apk-16kb-check
-description: APK/AAB/AAR/工程目录 16KB 页面对齐检查助手 - 使用官方工具检查是否符合 Google Play 16KB 页面大小要求。支持 APK 直接检查、AAB 转 APK 后检查、AAR 直接解压检查 ELF 段、Android 工程目录自动构建后检查，失败时自动尝试修复。
-disable-model-invocation: true
----
 
+
+version: 1
+category: android
+name: apk-16kb-check
+description: APK/AAB/AAR/工程目录 16KB 页面对齐检查助手 - 使用官方工具检查是否符合 Google Play 16KB 页面大小要求。支持 APK 直接检查、AAB 转 APK 后检查、AAR 直接解压检查 ELF 段、Android 工程目录自动构建后检查，失败时自动尝试修复
+disable-model-invocation: true
+
+
+---
 # APK/AAB/AAR/工程目录 16KB 页面对齐检查助手
 
 > **背景**：自 2025 年 11 月 1 日起，Google Play 要求所有以 Android 15 (API 35) 及以上为目标的应用必须支持 16KB 页面大小。
@@ -15,7 +19,7 @@ disable-model-invocation: true
 
 ## 前置检查
 
-1. 读取 `~/.zixiekit/.env` 文件获取 `WORK_ROOT`（缺失则 fallback 到 `$HOME`）
+1. 从系统环境变量或 `~/.zixiekit/.env` 获取 `WORK_ROOT`（缺失则 fallback 到 `$HOME`） <!-- zk-lint: ignore hardcoded.zixiekit-path -->
 2. AAB 模式需要 `bundletool`（[GitHub Releases](https://github.com/google/bundletool/releases)）
 3. 工程目录模式需要 Java/Gradle/SDK 环境就绪
 
@@ -33,9 +37,13 @@ disable-model-invocation: true
 | 输入类型 | zipalign 验证 | ELF 段检查 | 说明 |
 |----------|:---:|:---:|------|
 | APK | ✅ | ✅ | 完整检查 |
-| AAB | ✅（需 bundletool 转 APK） | ✅（直接解压提取） | ELF 为核心检查项 |
+| AAB | ✅（需 bundletool 转 APK） | ✅（直接解压提取） | ELF 为核心检查项；zipalign 结果**必须**以 bundletool 转出的产物为准 |
 | AAR | ❌（跳过） | ✅（直接解压提取） | 中间产物，zipalign 由宿主 APK 决定 |
 | 工程目录 | ✅ | ✅ | 自动构建 APK 后完整检查 |
+
+> ⚠️ **实测坑**：本地独立构建/导出的 release APK 显示 zipalign "完全对齐"，**不代表**该项目上传 Google Play 的 `.aab` 就对齐——二者打包路径不同，结果可能相反（曾出现本地 APK 全部 OK，但用 bundletool 从同一次构建的 `.aab` 转出的 universal/split APK 全部 `Verification FAILED`，与 Play Console "未压缩原生库未按 16KB zip 对齐" 报错一致，ELF LOAD 段本身仍是对齐的，问题纯粹在 ZIP 层 offset）。**只要项目产出 AAB 用于发布，就必须用 bundletool 从实际 `.aab` 构建产物验证，不能用本地 APK 测试结果代替结论。**
+>
+> **根因与修复（已验证）**：AGP < 8.5.1 时，`bundletool dump config --bundle=xxx.aab` 输出缺少 16K 对齐元数据字段，导致 bundletool 从 `.aab` 生成分发 APK 时未按 16K 对齐；升级到 **AGP 8.5.1+** 重新 `bundleRelease` 后问题消失。判断当前项目是否受影响：`grep "com.android.tools.build:gradle" build.gradle`，版本 < 8.5.1 且有发布 AAB 场景则必然踩坑。
 
 ## 目录结构
 
@@ -58,6 +66,9 @@ scripts/
 ```bash
 # APK（失败时自动修复）
 python3 check_alignment.py <APK路径>
+
+# APK + 手动指定项目源码目录（获取 AGP 版本告警和 SO 来源分析）
+python3 check_alignment.py <APK路径> --project <项目源码目录>
 
 # AAR（直接解压检查 ELF 段，秒级完成）
 python3 check_alignment.py <AAR路径...>
@@ -96,12 +107,12 @@ zipalign 失败 → 自动修复（仅 APK 模式）
 
 ```bash
 # 1. 解压 AAB 提取 .so 做 ELF 段检查
-unzip -o app.aab -d ${ZIXIEKIT_TMP}/apk-16kb-check/aab_extract/
+unzip -o app.aab -d ${ZIXIEKIT_TMP}/skill/apk-16kb-check/aab_extract/
 # .so 位于 base/lib/{abi}/ 下
 
 # 2. 用 bundletool 转 universal APK 做 zipalign 检查
 java -jar bundletool.jar build-apks --bundle=app.aab --output=app.apks --mode=universal
-unzip app.apks -d ${ZIXIEKIT_TMP}/apk-16kb-check/apks/
+unzip app.apks -d ${ZIXIEKIT_TMP}/skill/apk-16kb-check/apks/
 # 对 universal.apk 调用 check_alignment.py
 ```
 
@@ -112,6 +123,7 @@ unzip app.apks -d ${ZIXIEKIT_TMP}/apk-16kb-check/apks/
 3. 执行 `gradlew :{module}:assemble{Variant}`（默认 debug）
 4. 定位构建产物 APK，调用 `check_alignment.py`
 5. 发现问题时自动进入阶段 6 修复
+6. **发布场景**（用户提及 Google Play / 已存在 `bundleRelease` 产物 `.aab`）：额外执行 `gradlew :{module}:bundle{Variant}`，用 bundletool 转出 universal/split APK 重新验证 zipalign（见上方"实测坑"），不能仅凭本地 assemble APK 的结果下结论
 
 ## 修复方案
 
@@ -120,12 +132,16 @@ unzip app.apks -d ${ZIXIEKIT_TMP}/apk-16kb-check/apks/
 ```groovy
 android {
     packagingOptions {
-        jniLibs { useLegacyPackaging = false }
+        jniLibs { useLegacyPackaging = false }  // AGP 8.5.1+ 用 false，AGP < 8.5.1 必须用 true
     }
 }
 ```
 
-> AGP 8.5.1+ 已默认设置。
+> **官方规则**（[支持 16KB 页面大小](https://developer.android.com/guide/practices/page-sizes?hl=zh-cn)）：
+> - **AGP ≥ 8.5.1**：`useLegacyPackaging = false`（默认即可，无需手动设置），未压缩 SO 会自动按 16K 对齐
+> - **AGP 8.3~8.5**（不含 8.5.1）：本地打包看起来已按 16K 对齐，但 `bundletool` 从 `.aab` 构建分发 APK 时存在 zipalign 缺陷（**已实测命中**），官方规避方案是**必须显式设 `useLegacyPackaging = true`**（改回压缩存储）
+> - **AGP ≤ 8.0**：同上问题，且需额外在 `gradle.properties` 加 `android.bundle.enableUncompressedNativeLibs=false`
+> - 能升级到 8.5.1+ 才是根治方案；无法升级时 `useLegacyPackaging = true` 是必须项，不是可选项
 
 ### 2. ELF 段对齐（需重新编译）
 
@@ -140,7 +156,7 @@ android {
 
 | 方案 | 操作 |
 |------|------|
-| **升级 AGP（推荐）** | AGP 8.5.1+ 自动支持 |
+| **升级 AGP（已验证有效）** | AGP 8.5.1+，重新 `bundleRelease` 后 bundletool 转出的分发 APK zipalign 转为 OK |
 | **手动 zipalign** | `zipalign -P 16 -f 4 input.apk output.apk`（脚本自动执行） |
 
 > ⚠️ 正式发布：zipalign 必须在签名之前执行。
@@ -153,7 +169,7 @@ android {
 
 | 问题类型 | SO 来源 | AI 操作 |
 |----------|---------|---------|
-| 压缩存储 | 任意 | 直接修改 `build.gradle` |
+| 压缩存储 | 任意 | 直接修改 `build.gradle`（AGP 版本决定 true/false） |
 | ELF 未对齐 | 项目模块 | 修改 `CMakeLists.txt` / `build.gradle` |
 | ELF 未对齐 | 外部依赖 | 仅建议（提示升级或联系供应商） |
 | zipalign 未对齐 | 任意 | 修改 `build.gradle` 或升级 AGP |

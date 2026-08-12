@@ -24,6 +24,7 @@ SO 模式（仅 ELF 段检查）：
 
 用法:
   ./check_alignment.py <APK文件路径> [HTML输出路径]
+  ./check_alignment.py <APK文件路径> --project <项目源码目录>
   ./check_alignment.py <AAR文件路径...> [HTML输出路径]
   ./check_alignment.py <SO文件路径> [HTML输出路径]
   ./check_alignment.py --batch <目录路径>
@@ -170,12 +171,14 @@ def main():
     if len(sys.argv) < 2:
         print("用法:")
         print(f"  {sys.argv[0]} <APK文件路径> [HTML输出路径]")
+        print(f"  {sys.argv[0]} <APK文件路径> --project <项目源码目录>")
         print(f"  {sys.argv[0]} <AAR文件路径...> [HTML输出路径]")
         print(f"  {sys.argv[0]} <SO文件路径> [HTML输出路径]")
         print(f"  {sys.argv[0]} --batch <目录路径>")
         print()
         print("示例:")
         print(f"  {sys.argv[0]} app-release.apk")
+        print(f"  {sys.argv[0]} app-release.apk --project /path/to/project")
         print(f"  {sys.argv[0]} my-library.aar")
         print(f"  {sys.argv[0]} lib1.aar lib2.aar  # 多 AAR 合并检查")
         print(f"  {sys.argv[0]} libnative.so  # 直接检查 SO 文件")
@@ -187,6 +190,11 @@ def main():
         print("       AAR 是中间产物，zipalign 由宿主 APK 决定，因此跳过 zipalign 验证")
         print("       支持多个 AAR 文件一起检查")
         print("  SO:  直接检查单个 .so 文件的 ELF LOAD 段对齐（开发调试专用）")
+        print()
+        print("选项:")
+        print("  --project <路径>  手动指定 Android 项目源码目录（用于 AGP 版本检测和进一步分析）")
+        print("                    当 APK 不在项目 build/outputs/ 下时，无法自动反推项目目录，")
+        print("                    此时可手动指定以获得 AGP 版本告警和 SO 来源分析")
         print()
         print("检查项:")
         print("  APK: 1. 官方 zipalign -c -P 16 -v 4 验证 APK 整体对齐")
@@ -222,6 +230,29 @@ def main():
     if not file_args:
         print("错误: 请指定至少一个文件")
         sys.exit(1)
+
+    # 解析 --project 参数
+    project_root_override = None
+    if '--project' in file_args:
+        proj_idx = file_args.index('--project')
+        if proj_idx + 1 < len(file_args):
+            project_root_override = file_args[proj_idx + 1]
+            if not os.path.isdir(project_root_override):
+                print(f"错误: 项目目录不存在: {project_root_override}")
+                sys.exit(1)
+            # 验证是否为合法的 Android 项目（存在 settings.gradle 或 build.gradle）
+            has_marker = any(
+                os.path.isfile(os.path.join(project_root_override, f))
+                for f in ('settings.gradle', 'settings.gradle.kts', 'build.gradle', 'build.gradle.kts')
+            )
+            if not has_marker:
+                print(f"错误: 指定目录不是有效的 Android 项目（缺少 settings.gradle / build.gradle）: {project_root_override}")
+                sys.exit(1)
+            # 从参数列表中移除 --project 和其值
+            file_args = file_args[:proj_idx] + file_args[proj_idx + 2:]
+        else:
+            print("错误: --project 需要指定目录路径")
+            sys.exit(1)
 
     # 分离 AAR 文件和其他参数
     aar_paths = []
@@ -293,11 +324,15 @@ def main():
 
         result = check_apk(file_path)
 
-        # SO 来源分析：尝试从项目构建产物路径反推
-        project_root, so_source_map = analyze_so_sources(file_path)
+        # SO 来源分析：尝试从项目构建产物路径反推，同时检测 AGP/useLegacyPackaging 配置
+        # 支持 --project 手动指定项目目录（APK 不在 build/outputs/ 下时使用）
+        project_root, so_source_map, agp_info = analyze_so_sources(file_path, project_root_override=project_root_override)
         if project_root:
             result.project_root = project_root
             result.so_source_map = so_source_map
+            result.agp_version = agp_info.get('agp_version', '')
+            result.use_legacy_packaging = agp_info.get('use_legacy_packaging')
+            result.agp_config_source = agp_info.get('source_file', '')
             for elf_r in result.elf_results:
                 if elf_r.name in so_source_map:
                     info = so_source_map[elf_r.name]

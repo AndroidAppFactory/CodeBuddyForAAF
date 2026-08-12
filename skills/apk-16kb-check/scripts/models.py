@@ -75,9 +75,12 @@ class CheckResult:
     has_compressed_so: bool = False  # 是否有压缩存储的 .so
     compressed_so_names: List[str] = field(default_factory=list)  # 压缩存储的 .so 名称
     source_aar_paths: List[str] = field(default_factory=list)  # 原始 AAR 路径（AAR 模式时记录）
-    project_root: str = ""  # Android 项目根目录（APK 模式时从路径反推）
+    project_root: str = ""  # Android 项目根目录（APK 模式时从路径反推，或由 --project-root 显式指定）
     so_source_map: Dict[str, Dict] = field(default_factory=dict)  # .so名 → {module, type, aar_path} 映射
     fix_result: Optional['FixResult'] = None  # 自动修复结果（zipalign 失败时填充）
+    agp_version: str = ""  # 检测到的 AGP 版本（仅 project_root 存在时）
+    use_legacy_packaging: Optional[bool] = None  # useLegacyPackaging 显式设置值，None 表示未显式设置
+    agp_config_source: str = ""  # AGP 版本/useLegacyPackaging 信息来源文件路径
 
     # ELF 检查统计
     @property

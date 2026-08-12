@@ -342,27 +342,183 @@ def analyze_so_sources_from_aars(aar_paths) -> Dict[str, Dict]:
     return so_map
 
 
-def analyze_so_sources(apk_path: str) -> Tuple[Optional[str], Dict[str, Dict]]:
-    """分析 APK 中 .so 文件的来源
+# ============================================================================
+# AGP 版本 & useLegacyPackaging 检测
+# ============================================================================
+
+_AGP_VERSION_PATTERNS = [
+    re.compile(r'com\.android\.tools\.build:gradle:([\d.]+)'),
+    re.compile(r'id\s*[\(\s]?[\'"]com\.android\.application[\'"]\)?\s*version\s*[\'"]([\d.]+)[\'"]'),
+    re.compile(r'id\s*[\(\s]?[\'"]com\.android\.library[\'"]\)?\s*version\s*[\'"]([\d.]+)[\'"]'),
+]
+
+_AGP_TOML_PATTERNS = [
+    re.compile(r'^\s*(?:agp|android-gradle-plugin|androidGradlePlugin|android-application)\s*=\s*[\'"]([\d.]+)[\'"]', re.MULTILINE),
+]
+
+_USE_LEGACY_PACKAGING_PATTERN = re.compile(r'useLegacyPackaging\s*=\s*(true|false)', re.IGNORECASE)
+
+
+def parse_agp_version(text: str) -> Optional[str]:
+    """从文本中解析 AGP 版本号"""
+    for pattern in _AGP_VERSION_PATTERNS:
+        m = pattern.search(text)
+        if m:
+            return m.group(1)
+    return None
+
+
+def is_agp_below(version: str, threshold: Tuple[int, int, int] = (8, 5, 1)) -> Optional[bool]:
+    """比较 AGP 版本是否低于阈值（默认 8.5.1）
+
+    返回: True/False，解析失败返回 None
+    """
+    try:
+        parts = tuple(int(x) for x in version.split('.')[:3])
+        parts = parts + (0,) * (3 - len(parts))
+        return parts < threshold
+    except (ValueError, AttributeError):
+        return None
+
+
+def get_agp_tier(version: str) -> Optional[str]:
+    """根据 AGP 版本返回所在区间，用于给出精确的修复建议
+
+    返回:
+      "8.5.1+"  — AGP ≥ 8.5.1，useLegacyPackaging = false 即可（官方根治方案）
+      "8.3-8.5" — AGP 8.3~8.5（含 8.5.0），bundletool 有 zipalign 缺陷，必须 useLegacyPackaging = true
+      "<8.3"    — AGP < 8.3，同上问题且需额外加 enableUncompressedNativeLibs=false
+      None      — 解析失败
+    """
+    try:
+        parts = tuple(int(x) for x in version.split('.')[:3])
+        parts = parts + (0,) * (3 - len(parts))
+    except (ValueError, AttributeError):
+        return None
+
+    if parts >= (8, 5, 1):
+        return "8.5.1+"
+    elif parts >= (8, 3, 0):
+        return "8.3-8.5"
+    else:
+        return "<8.3"
+
+
+def detect_agp_config(project_root: str, module_name: Optional[str] = None) -> Dict:
+    """检测项目的 AGP 版本与 useLegacyPackaging 显式配置
+
+    搜索范围（避免全树扫描）：
+    - 项目根 build.gradle / build.gradle.kts（AGP 版本）
+    - gradle/libs.versions.toml（AGP 版本，version catalog 场景）
+    - 应用模块 build.gradle / build.gradle.kts（useLegacyPackaging，若已知 module_name）
+    - 项目根 build.gradle / build.gradle.kts（useLegacyPackaging 兜底）
+
+    返回: {agp_version, use_legacy_packaging, source_file}
+    """
+    info: Dict = {'agp_version': '', 'use_legacy_packaging': None, 'source_file': ''}
+
+    # ---- 1. AGP 版本：先查根 build.gradle(.kts) ----
+    for fname in ('build.gradle', 'build.gradle.kts'):
+        fpath = os.path.join(project_root, fname)
+        if os.path.isfile(fpath):
+            try:
+                text = Path(fpath).read_text(encoding='utf-8', errors='ignore')
+            except Exception:
+                continue
+            version = parse_agp_version(text)
+            if version:
+                info['agp_version'] = version
+                info['source_file'] = fpath
+                break
+
+    # ---- 2. AGP 版本兜底：gradle/libs.versions.toml ----
+    if not info['agp_version']:
+        toml_path = os.path.join(project_root, 'gradle', 'libs.versions.toml')
+        if os.path.isfile(toml_path):
+            try:
+                text = Path(toml_path).read_text(encoding='utf-8', errors='ignore')
+                for pattern in _AGP_TOML_PATTERNS:
+                    m = pattern.search(text)
+                    if m:
+                        info['agp_version'] = m.group(1)
+                        info['source_file'] = toml_path
+                        break
+            except Exception:
+                pass
+
+    # ---- 3. useLegacyPackaging：优先查应用模块 build.gradle(.kts) ----
+    candidates = []
+    if module_name:
+        candidates.append(os.path.join(project_root, module_name, 'build.gradle'))
+        candidates.append(os.path.join(project_root, module_name, 'build.gradle.kts'))
+    candidates.append(os.path.join(project_root, 'build.gradle'))
+    candidates.append(os.path.join(project_root, 'build.gradle.kts'))
+
+    for fpath in candidates:
+        if os.path.isfile(fpath):
+            try:
+                text = Path(fpath).read_text(encoding='utf-8', errors='ignore')
+            except Exception:
+                continue
+            m = _USE_LEGACY_PACKAGING_PATTERN.search(text)
+            if m:
+                info['use_legacy_packaging'] = m.group(1).lower() == 'true'
+                if not info['source_file']:
+                    info['source_file'] = fpath
+                break
+
+    return info
+
+
+def analyze_so_sources(apk_path: str, project_root_override: str = None) -> Tuple[Optional[str], Dict[str, Dict], Dict]:
+    """分析 APK 中 .so 文件的来源，并检测 AGP 版本 / useLegacyPackaging 配置
 
     流程：
-    1. 从 APK 路径反推项目根目录
+    1. 从 APK 路径反推项目根目录（或使用 project_root_override 手动指定）
     2. 从 APK 中提取 .so 文件名列表
     3. 在 Gradle transforms 缓存中反向查找来源
     4. 通过 modules-2 缓存反查完整 Maven 坐标
     5. 未匹配的标记为「来源未知」
+    6. 检测项目 AGP 版本与 useLegacyPackaging 显式配置，命中已知坑时告警
 
-    返回: (project_root, so_source_map) 或 (None, {})
+    参数:
+      apk_path: APK 文件路径
+      project_root_override: 手动指定的项目根目录（当 APK 不在 build/outputs/ 下时使用）
+
+    返回: (project_root, so_source_map, agp_info) 或 (None, {}, {})
     """
     c = Colors
-    result = detect_project_root(apk_path)
-    if not result:
-        return None, {}
 
-    project_root, module_name = result
-    print(f"\n{c.CYAN}🔍 检测到 Android 项目，开始分析 .so 来源...{c.NC}")
-    print(f"  项目根目录: {project_root}")
-    print(f"  构建模块: {module_name}")
+    # 优先使用手动指定的项目目录，否则从 APK 路径反推
+    module_name = None
+    if project_root_override:
+        project_root = os.path.abspath(project_root_override)
+        # 尝试从项目目录中猜测模块名（查找含 build.gradle 的 app/ 目录）
+        for candidate in ('app', 'Application'):
+            candidate_path = os.path.join(project_root, candidate)
+            if os.path.isdir(candidate_path) and any(
+                os.path.isfile(os.path.join(candidate_path, f))
+                for f in ('build.gradle', 'build.gradle.kts')
+            ):
+                module_name = candidate
+                break
+        print(f"\n{c.CYAN}🔍 使用手动指定的项目目录，开始分析 .so 来源...{c.NC}")
+        print(f"  项目根目录: {project_root}（--project 指定）")
+        if module_name:
+            print(f"  推测应用模块: {module_name}")
+    else:
+        result = detect_project_root(apk_path)
+        if not result:
+            return None, {}, {}
+        project_root, module_name = result
+        print(f"\n{c.CYAN}🔍 检测到 Android 项目，开始分析 .so 来源...{c.NC}")
+        print(f"  项目根目录: {project_root}")
+        print(f"  构建模块: {module_name}")
+
+    # 检测 AGP 版本 / useLegacyPackaging（详细修复建议由 report_terminal 统一输出）
+    agp_info = detect_agp_config(project_root, module_name)
+    if agp_info.get('agp_version'):
+        print(f"  AGP 版本: {agp_info['agp_version']}，useLegacyPackaging = {agp_info.get('use_legacy_packaging')}")
 
     # 解析 Gradle User Home
     cache_dirs, gradle_user_home, source_desc = _get_gradle_cache_dirs(project_root)
@@ -378,7 +534,7 @@ def analyze_so_sources(apk_path: str) -> Tuple[Optional[str], Dict[str, Dict]]:
     all_so_names = _extract_so_names_from_apk(apk_path)
     if not all_so_names:
         print(f"  {c.YELLOW}⚠️ APK 中未发现 .so 文件{c.NC}")
-        return project_root, so_map
+        return project_root, so_map, agp_info
 
     print(f"  APK 中共有 {len(all_so_names)} 个 .so 文件")
 
@@ -410,4 +566,4 @@ def analyze_so_sources(apk_path: str) -> Tuple[Optional[str], Dict[str, Dict]]:
     else:
         print(f"  {c.YELLOW}⚠️ 未能建立 .so 来源映射{c.NC}")
 
-    return project_root, so_map
+    return project_root, so_map, agp_info

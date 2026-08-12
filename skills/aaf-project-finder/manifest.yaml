@@ -1,9 +1,0 @@
-name: aaf-project-finder
-version: 1
-category: aaf
-type: skill
-
-modes: [ide]
-
-# 内部组件：由 aaf-sample-upgrade workflow 编排调用，不单独触发。
-internal: true

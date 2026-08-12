@@ -14,6 +14,7 @@ from pathlib import Path
 from models import CheckResult, ZipalignEntry
 from checker_common import find_check_elf_script, find_tool
 from report_terminal import classify_zipalign_bad_entries
+from so_source_analyzer import is_agp_below, get_agp_tier
 
 
 def _format_ndk_version_html(ndk_text: str) -> str:
@@ -977,6 +978,129 @@ readelf -l libXxx.so | grep -A1 LOAD</code></pre>
     <p style="color: #16a34a; font-size: 14px;">🎉 当前 APK 已通过所有 16KB 对齐检查，无需额外修复。以下为通用参考信息。</p>
 '''
 
+    # AGP 版本 / useLegacyPackaging / bundletool 兼容性（放在第三个 tab 中）
+    # 同时包含 APK vs AAB 差异提示（合并展示，避免重复）
+    aab_note = ''
+    if not is_aar and not result.file_path.endswith('.so'):
+        aab_note = '''<p style="margin:8px 0 0; font-size:12px; color:#6b7280; line-height:1.6;">
+            <strong>注意：</strong>本地 <code>assembleRelease</code> 产出的 APK 对齐通过 ≠ <code>bundleRelease</code> 产出的 .aab 经 bundletool 生成的分发 APK 对齐。如项目通过 Google Play AAB 分发，建议额外用 <code>bundletool build-apks</code> → <code>extract</code> 验证。
+          </p>'''
+
+    if result.agp_version:
+        tier = get_agp_tier(result.agp_version)
+        agp_source_html = ''
+        if result.agp_config_source:
+            agp_source_html = f'<div style="margin-top:8px; font-size:12px; color:#9ca3af;">配置来源：<code>{html.escape(result.agp_config_source)}</code></div>'
+
+        if tier == "8.5.1+":
+            legacy_note = ""
+            if result.use_legacy_packaging is False:
+                legacy_note = "<br>useLegacyPackaging = false（官方根治方案，非压缩存储 + 正确对齐）"
+            html_content += f'''
+    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:16px 20px; margin-bottom:24px;">
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="font-size:20px; flex-shrink:0;">✅</span>
+        <div>
+          <strong style="font-size:14px; color:#166534;">AGP {html.escape(result.agp_version)} ≥ 8.5.1，bundletool zipalign 缺陷已官方修复</strong>
+          <p style="margin:6px 0 0; font-size:13px; color:#166534; line-height:1.6;">
+            {legacy_note}
+          </p>
+          {aab_note}
+          {agp_source_html}
+        </div>
+      </div>
+    </div>
+'''
+        elif tier == "8.3-8.5":
+            if result.use_legacy_packaging is True:
+                html_content += f'''
+    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:16px 20px; margin-bottom:24px;">
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="font-size:20px; flex-shrink:0;">✅</span>
+        <div>
+          <strong style="font-size:14px; color:#166534;">AGP {html.escape(result.agp_version)}（8.3~8.5 区间），已设置 useLegacyPackaging = true 规避 bundletool 缺陷</strong>
+          <p style="margin:6px 0 0; font-size:13px; color:#92400e; line-height:1.6;">
+            <strong>提示：</strong>升级 AGP ≥ 8.5.1 后可改为 false（官方根治方案）
+          </p>
+          {aab_note}
+          {agp_source_html}
+        </div>
+      </div>
+    </div>
+'''
+            else:
+                html_content += f'''
+    <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:16px 20px; margin-bottom:24px;">
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="font-size:20px; flex-shrink:0;">⚠️</span>
+        <div>
+          <strong style="font-size:14px; color:#991b1b;">已知坑：AGP {html.escape(result.agp_version)}（8.3~8.5 区间），且未显式设置 useLegacyPackaging = true</strong>
+          <p style="margin:6px 0 0; font-size:13px; color:#991b1b; line-height:1.6;">
+            本地打包对齐正常，但 bundletool 从 <code>.aab</code> 构建分发 APK 时存在 zipalign 缺陷（已实测命中）。
+          </p>
+          <p style="margin:6px 0 0; font-size:13px; color:#92400e; line-height:1.6;">
+            <strong>必须项：</strong>在 build.gradle 中设置 <code>useLegacyPackaging = true</code>（不是可选项）<br>
+            <strong>根治方案：</strong>升级 AGP ≥ 8.5.1
+          </p>
+          {aab_note}
+          {agp_source_html}
+        </div>
+      </div>
+    </div>
+'''
+        elif tier == "<8.3":
+            if result.use_legacy_packaging is True:
+                html_content += f'''
+    <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:16px 20px; margin-bottom:24px;">
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="font-size:20px; flex-shrink:0;">✅</span>
+        <div>
+          <strong style="font-size:14px; color:#92400e;">AGP {html.escape(result.agp_version)}（< 8.3），已设置 useLegacyPackaging = true 规避 bundletool 缺陷</strong>
+          <p style="margin:6px 0 0; font-size:13px; color:#92400e; line-height:1.6;">
+            <strong>提示：</strong>还需确认 gradle.properties 中有 <code>android.bundle.enableUncompressedNativeLibs=false</code><br>
+            <strong>根治方案：</strong>升级 AGP ≥ 8.5.1
+          </p>
+          {aab_note}
+          {agp_source_html}
+        </div>
+      </div>
+    </div>
+'''
+            else:
+                html_content += f'''
+    <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:16px 20px; margin-bottom:24px;">
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="font-size:20px; flex-shrink:0;">⚠️</span>
+        <div>
+          <strong style="font-size:14px; color:#991b1b;">已知坑：AGP {html.escape(result.agp_version)}（< 8.3），存在 bundletool zipalign 缺陷</strong>
+          <p style="margin:6px 0 0; font-size:13px; color:#991b1b; line-height:1.6;">
+            bundletool 从 <code>.aab</code> 构建的分发 APK 可能出现 zipalign 未按 16K 对齐（本地 assemble APK 测试通过 ≠ 发布产物对齐）。
+          </p>
+          <p style="margin:6px 0 0; font-size:13px; color:#92400e; line-height:1.6;">
+            <strong>必须项 1：</strong>在 build.gradle 中设置 <code>useLegacyPackaging = true</code><br>
+            <strong>必须项 2：</strong>在 gradle.properties 中加 <code>android.bundle.enableUncompressedNativeLibs=false</code><br>
+            <strong>根治方案：</strong>升级 AGP ≥ 8.5.1
+          </p>
+          {aab_note}
+          {agp_source_html}
+        </div>
+      </div>
+    </div>
+'''
+
+    elif aab_note:
+        # 没有 AGP 版本信息但是 APK 模式，仍显示 AAB 差异提示
+        html_content += f'''
+    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:14px 18px; margin:12px 0 16px;">
+      <div style="display:flex; align-items:flex-start; gap:8px;">
+        <span style="font-size:16px; flex-shrink:0;">💡</span>
+        <div style="font-size:13px; color:#1e40af; line-height:1.7;">
+          {aab_note}
+        </div>
+      </div>
+    </div>
+'''
+
     has_any_issue = not zipalign_ok or result.elf_failed > 0 or result.has_compressed_so
     if has_any_issue:
         html_content += '    <h2 style="margin-bottom: 16px;">🔧 修复方案总览</h2>\n'
@@ -1014,7 +1138,7 @@ readelf -l libXxx.so | grep -A1 LOAD</code></pre>
         </tr>
         <tr style="background: rgba(255,255,255,0.6);">
           <td style="padding: 8px 12px; border: 1px solid #bbf7d0; font-weight: bold;">useLegacyPackaging</td>
-          <td style="padding: 8px 12px; border: 1px solid #bbf7d0;">确保 <code>packaging.jniLibs.useLegacyPackaging = false</code>（AGP 8.5.1+ 默认开启）</td>
+          <td style="padding: 8px 12px; border: 1px solid #bbf7d0;"><code>packaging.jniLibs.useLegacyPackaging</code>：AGP ≥ 8.5.1 设为 <code>false</code>，AGP &lt; 8.5.1 设为 <code>true</code></td>
         </tr>
       </table>
     </div>
@@ -1081,7 +1205,7 @@ readelf -l libXxx.so | grep -A1 LOAD</code></pre>
       <table style="width:100%; border-collapse:collapse; font-size:13px;">
         <tr style="background: rgba(255,255,255,0.6);">
           <td style="padding: 8px 12px; border: 1px solid #fde68a; font-weight: bold; width: 160px;">build.gradle</td>
-          <td style="padding: 8px 12px; border: 1px solid #fde68a;"><code>android.packaging.jniLibs.useLegacyPackaging = false</code></td>
+          <td style="padding: 8px 12px; border: 1px solid #fde68a;"><code>android.packaging.jniLibs.useLegacyPackaging</code>：AGP ≥ 8.5.1 设为 <code>false</code>，AGP &lt; 8.5.1 设为 <code>true</code></td>
         </tr>
         <tr>
           <td style="padding: 8px 12px; border: 1px solid #fde68a; font-weight: bold;">AndroidManifest</td>

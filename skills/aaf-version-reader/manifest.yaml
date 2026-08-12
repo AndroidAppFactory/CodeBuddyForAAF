@@ -1,6 +1,0 @@
-name: aaf-version-reader
-version: 1
-category: aaf
-type: skill
-
-modes: [ide]

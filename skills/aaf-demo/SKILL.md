@@ -1,17 +1,18 @@
 ---
+
+
 name: aaf-demo
 version: 1
+category: aaf
+description: AAF Demo 开发助手。当用户说"AAF-demo"、"AAF-Temp"时使用此 skill
+
+
 ---
 
 # AAF Demo 开发助手
-
-## 触发条件
-
-关键词："demo"、"AAF-Temp"、"自动运行"、"调试运行"、"写个 Demo"
-
 ## 前置条件
 
-- 环境变量 `AAF_HOME` 已设置
+- 项目定位：通过 `aaf-project-finder` Skill 定位（`$AAF_HOME/AndroidAppFactory`）
 - `$AAF_HOME/AndroidAppFactory/temp/AAF-Temp` 存在（由 init.sh 自动创建）
 
 ## 工作流程

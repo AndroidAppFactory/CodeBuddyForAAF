@@ -12,8 +12,8 @@ import sys
 from typing import List, Optional, Tuple
 from pathlib import Path
 
-# 加载环境变量（~/.zixiekit/bootstrap.py 由 zk init 部署）
-sys.path.insert(0, str(Path.home() / ".zixiekit"))
+# 加载环境变量（~/.zixiekit/scripts/bootstrap.py 由 zk init / zk instance update 部署）
+sys.path.insert(0, str(Path.home() / ".zixiekit" / "scripts"))
 from bootstrap import load_env  # noqa: E402
 load_env()
 
