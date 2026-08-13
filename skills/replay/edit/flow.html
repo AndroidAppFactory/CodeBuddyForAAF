@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZixieKit Replay Flow 编排器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:#080c15;color:#d1d5db;height:100vh;overflow:hidden;
+}
+.app{display:grid;grid-template-columns:1.3fr 2fr 2fr;height:calc(100vh - 60px);gap:1px;background:#1a1f2e;margin:30px;border-radius:8px;overflow:hidden;}
+
+/* 左侧面板 */
+.panel-left{background:#0d1117;display:flex;flex-direction:column;overflow:hidden;}
+.panel-left .ph{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid #161b22;background:#0d1117;}
+.panel-left .ph h2{font-size:18px;font-weight:500;color:#58a6ff;letter-spacing:.3px;}
+.panel-left .ps{padding:10px 14px;}
+.panel-left .ps input{
+  width:100%;padding:7px 12px;border:1px solid #21262d;border-radius:6px;
+  background:#0d1117;color:#c9d1d9;font-size:18px;outline:none;transition:border-color .2s;
+}
+.panel-left .ps input:focus{border-color:#58a6ff;box-shadow:0 0 0 2px rgba(88,166,255,.15)}
+.panel-left .pl{flex:1;overflow-y:auto;padding:6px 10px;}
+.adding-bar{padding:6px 10px;font-size:15px;color:#484f58;text-align:center;
+  border-bottom:1px solid #161b22;background:#0d1117;}
+.adding-bar b{color:#d29922}
+.adding-bar.editing{color:#58a6ff;background:rgba(88,166,255,.06);border-bottom-color:rgba(88,166,255,.2);}
+
+/* 中间面板 */
+.panel-center{background:#0d1117;display:flex;flex-direction:column;}
+.panel-center .ph{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid #161b22;}
+.panel-center .ph h2{font-size:21px;font-weight:600;color:#58a6ff;}
+.meta{padding:12px 20px;border-bottom:1px solid #161b22;display:flex;gap:10px;}
+.meta .field{display:flex;align-items:center;gap:6px;}
+.meta .field:first-child{flex:0 0 auto}
+.meta .field:nth-child(2){flex:0 0 auto}
+.meta .field:nth-child(3){flex:1}
+.meta .field:nth-child(4){flex:1}
+.meta label{font-size:16px;color:#484f58;white-space:nowrap;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.meta input{
+  padding: 9px 10px;border:1px solid #21262d;border-radius:5px;  background:#0d1117;color:#c9d1d9;font-size:18px;outline:none;transition:border-color .2s;
+  width:100%;
+}
+.meta input:focus{border-color:#58a6ff;box-shadow:0 0 0 2px rgba(88,166,255,.15)}
+.meta input[readonly]{color:#484f58;cursor:default;font-family:'SF Mono',Monaco,monospace;font-size:15px;}
+.steps-head{padding:12px 20px 6px;display:flex;align-items:center;justify-content:space-between;}
+.steps-head h3{font-size:18px;font-weight:600;color:#58a6ff;text-transform:uppercase;letter-spacing:.5px;}
+.steps-head .count{color:#484f58;font-size:16px;font-weight:400;}
+.steps-list{flex:1;overflow-y:auto;padding:4px 14px 14px;}
+
+/* 右侧面板 */
+.panel-right{background:#0d1117;display:flex;flex-direction:column;overflow:hidden;}
+.panel-right .section{padding:14px 18px;border-bottom:1px solid #161b22;}
+.panel-right .section h3{font-size:16px;color:#58a6ff;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.panel-right .hint{font-size:20px;color:#484f58;line-height:2.2}
+.panel-right .hint code{color:#7ee787;background:rgba(126,231,135,.08);padding:2px 6px;border-radius:3px;font-size:18px;line-height:2}
+
+/* Flow 卡片 */
+.flow-card{
+  display:flex;align-items:center;padding:8px 10px;border:1px solid transparent;
+  border-radius: 9px;margin-bottom:2px;cursor:pointer;transition:all .15s;}
+.flow-card{background:#0d1117;border:1px solid #161b22;}
+.flow-card:hover{background:#161b22;border-color:#21262d;}
+.flow-card.active{background:#161b22;border-color:#30363d;box-shadow:inset 2px 0 0 #58a6ff;}
+.flow-card .fc-info{flex:1;min-width:0;}
+.flow-card .fc-name{font-size:16px;font-weight:400;color:#8b949e;}
+.flow-card .fc-meta{font-size:15px;color:#484f58;margin-left:auto;flex-shrink:0;white-space:nowrap;}
+.flow-card .fc-id{font-size:14px;font-family:'SF Mono',Monaco,monospace;color:#30363d;background:#161b22;padding:1px 5px;border-radius:3px;}
+.flow-card .fc-badge{font-size:14px;padding:1px 6px;border-radius:3px;font-weight:600;flex-shrink:0;}
+.flow-card .fc-badge.task{background:rgba(88,166,255,.1);color:#58a6ff;}
+.flow-card .fc-badge.flow{background:rgba(210,153,34,.1);color:#d29922;}
+.flow-card .fc-del{
+  padding: 3px 5px;border:none;border-radius:3px;cursor:pointer;  background:transparent;color:#30363d;font-size:15px;opacity:0;
+  transition:opacity .15s,color .15s;flex-shrink:0;line-height:1;
+}
+.flow-card:hover .fc-del{opacity:1}
+.flow-card .fc-del:hover{color:#f85149;background:rgba(248,81,73,.1)}
+
+/* 分组 */
+.group-header{
+  padding:6px 12px;font-size:18px;font-weight:500;color:#c9d1d9;cursor:pointer;
+  user-select:none;display:flex;align-items:center;gap:8px;margin-top:8px;
+}
+.group-header:hover{color:#e2e8f0;}
+.group-header .grp-arrow{display:inline-block;transition:transform .2s;font-size:18px;width:18px}
+.group-header.collapsed .grp-arrow{transform:rotate(-90deg)}
+.group-body{padding-left:24px}
+.group-body.collapsed{display:none}
+
+
+/* 步骤卡片 */
+.step-card{
+  display:flex;align-items:center;padding:8px 12px;border:1px solid #21262d;
+  border-radius: 9px;margin-bottom:3px;cursor:pointer;transition:all .15s;gap:8px;font-size:18px;  background:#0d1117;
+}
+.step-card:hover{background:#161b22;border-color:#30363d;}
+.step-card.selected{background:#161b22;border-color:#58a6ff;}
+.step-card.drag-over{border-color:#d29922;border-style:dashed;background:rgba(210,153,34,.05)}
+.step-card .sn{font-size:15px;color:#58a6ff;min-width:18px;font-weight:600;}
+.step-card .si{font-size:20px;flex-shrink:0;}
+.step-card .sd{flex:1;font-size:18px;color:#c9d1d9;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.step-card .smeta{font-size:15px;color:#484f58;flex-shrink:0;}
+.step-card .sbadge{font-size:14px;padding:1px 5px;border-radius:3px;color:#484f58;background:#161b22;flex-shrink:0;}
+.step-card .sact{display:flex;gap:4px;flex-shrink:0;opacity:0;transition:opacity .15s;}
+.step-card:hover .sact{opacity:1;}
+
+/* 引用展开 */
+.step-ref-preview{margin-top:6px;padding:6px 10px;border-top:1px solid #21262d;display:none;margin-left:26px;}
+.step-ref-preview.show{display:block;}
+.ref-item{font-size:15px;color:#8b949e;padding:2px 0;display:flex;gap:5px;align-items:center;}
+.ref-item .ri{color:#58a6ff;font-size:14px;min-width:16px;}
+.ref-item .rd{flex:1;}
+
+/* 预览区域 */
+#preview-area{padding:0;}
+#preview-area .pv-name{font-size:18px;font-weight:600;color:#c9d1d9;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+#preview-area .pv-badge{font-size:14px;padding:1px 6px;border-radius:3px;font-weight:600;}
+#preview-area .pv-badge.task{background:rgba(88,166,255,.1);color:#58a6ff;}
+#preview-area .pv-badge.flow{background:rgba(210,153,34,.1);color:#d29922;}
+#preview-area .pv-empty{font-size:16px;color:#30363d;text-align:center;padding:16px 0;}
+
+/* 按钮 */
+.btn{
+  padding: 8px 12px;border:1px solid #21262d;border-radius:6px;font-size:16px;  cursor:pointer;background:#21262d;color:#8b949e;transition:all .15s;
+  display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-weight:500;
+}
+.btn:hover{background:#30363d;border-color:#8b949e;color:#c9d1d9;}
+.btn-sm{padding:4px 10px;font-size:15px;border-radius:5px;}
+.btn-xs{padding:2px 6px;font-size:14px;border-radius:3px;}
+.btn-primary{background:#1f6feb;border-color:#1f6feb;color:#fff;}
+.btn-primary:hover{background:#388bfd;border-color:#388bfd;}
+.btn-danger{background:transparent;border-color:rgba(248,81,73,.3);color:#f85149;}
+.btn-danger:hover{background:rgba(248,81,73,.1);border-color:#f85149;}
+.btn-add{background:transparent;border-color:rgba(88,166,255,.3);color:#58a6ff;}
+.btn-add:hover{background:rgba(88,166,255,.1);border-color:#58a6ff;}
+
+.empty-state{text-align:center;padding:40px 20px;color:#30363d;font-size:18px;}
+#meta-bar,#steps-head,#sl{display:none}
+#meta-bar.show,#steps-head.show,#sl.show{display:flex}
+#sl.show{display:block}
+#preview-state{font-size:18px;}
+#preview-state{display:flex;flex-direction:column;height:100%}
+#preview-state .pv-flow-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-shrink:0}
+#preview-state .pv-flow-name{font-size:21px;font-weight:600;color:#c9d1d9;flex:1;display:flex;align-items:baseline;gap:6px}
+#preview-state .pv-flow-desc{font-size:16px;color:#484f58;margin-bottom:8px;flex-shrink:0}
+#preview-state .pv-flow-body{flex:1;overflow-y:auto;min-height:0}
+#preview-state .pv-flow-steps .ref-item{padding:1px 0;}
+
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  padding: 12px 20px;border-radius:8px;font-size:18px;font-weight:500;z-index:2000;  opacity:0;transition:opacity .3s;pointer-events:none;
+  background:#238636;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.4);
+}
+.toast.show{opacity:1;}
+.toast.warn{background:#9e6a03;}
+
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:3000;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(4px);
+}
+.modal-overlay.show{opacity:1;pointer-events:auto;}
+.modal-box{
+  background:#161b22;border:1px solid #30363d;border-radius:12px;
+  padding: 36px 28px;max-width:380px;width:90%;  box-shadow:0 12px 40px rgba(0,0,0,.6);
+}
+.modal-box h3{font-size:21px;color:#c9d1d9;margin-bottom:10px;font-weight:600;}
+.modal-box p{font-size:18px;color:#8b949e;line-height:1.7;margin-bottom:18px;}
+.modal-box code{color:#7ee787;background:rgba(126,231,135,.08);padding:1px 4px;border-radius:3px;}
+.modal-box .modal-act{display:flex;gap:8px;justify-content:flex-end;}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#21262d;border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:#30363d}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 左侧：Flow 列表 -->
+  <div class="panel-left">
+    <div class="ph"><h2 id="page-title">📋 ZixieKit Replay Flows</h2><span><button class="btn btn-add btn-sm" onclick="newFlow()">＋ 新建Flow</button><button class="btn btn-sm" onclick="newGroup()" style="margin-left:4px">📂 新建分组</button></span></div>
+    <div class="adding-bar" id="adding-bar">点击 <b style="color:#fbbf24">可编排</b> Flow 查看详情</div>
+    <div class="ps"><input id="fs" placeholder="搜索 Flow..." oninput="rFlows()"></div>
+    <div class="pl" id="flist"><div class="empty-state">暂无 Flow</div></div>
+  </div>
+
+  <!-- 中间：编辑区 / 预览区 -->
+  <div class="panel-center">
+    <div class="ph" id="ph-center"><h2 id="tit">Flow 编排器</h2><span id="ph-btns"></span></div>
+    <div class="meta" id="meta-bar">
+      <div class="field"><label>ID</label><input id="fid" readonly style="color:#64748b;width:160px" placeholder="自动"></div>
+      <div class="field group-field"><label>分组</label><select id="fg" onchange="d()" style="width:160px"></select></div>
+      <div class="field"><label>名称</label><input id="fn" onchange="d()" placeholder="输入名称"></div>
+      <div class="field"><label>描述</label><input id="fd" onchange="d()" placeholder="可选描述"></div>
+    </div>
+    <div class="steps-head" id="steps-head"><h3>编排步骤 <span class="count" id="sc">(0)</span></h3></div>
+    <div class="steps-list" id="sl"></div>
+    <!-- 预览状态 -->
+    <div id="preview-state" class="empty-state" style="padding:40px">
+      <div style="font-size:42px;margin-bottom:12px">📋</div>
+      <div style="font-size:21px;color:#94a3b8;margin-bottom:6px">选择一个可编排 Flow</div>
+      <div style="font-size:18px;color:#475569">点击左侧 <b style="color:#fbbf24">可编排</b> Flow 查看详情</div>
+    </div>
+  </div>
+
+  <!-- 右侧：预览详情 -->
+  <div class="panel-right">
+    <div class="section">
+      <h3 id="right-title">💡 使用说明</h3>
+      <p class="hint" id="right-hint">点击左侧查看详情<br>运行：<code>zk replay flow run &lt;id前4位&gt;</code></p>
+    </div>
+    <div class="section" style="flex:1;min-height:0;overflow-y:auto">
+      <div id="preview-area"><p class="pv-empty">点击 Flow 名称查看详情</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <h3 id="modal-title"></h3>
+    <p id="modal-msg"></p>
+    <div class="modal-act" id="modal-act"></div>
+  </div>
+</div>
+
+<script>
+let fs=[],cf=null,ci='',df=false,pi='';
+let _groups=[];  // [{id, name}]
+let selected=new Set(),dragFrom=-1,expanded=-1;
+function fn(id){let f=fs.find(x=>x.id===id);return f?f.name:id}
+function _gn(gid){let g=_groups.find(x=>x.id===gid);return g?g.name:''}
+
+async function init(){await ld();rFlows();if(window.__INIT_FLOW){let f=fs.find(x=>x.name===window.__INIT_FLOW||x.id===window.__INIT_FLOW);if(f)await previewFlow(f.id)}}
+async function api(p,m='GET',b){let o={method:m,headers:{'Content-Type':'application/json'}};if(b)o.body=JSON.stringify(b);return(await fetch(p,o)).json()}
+async function ld(){let d=await api('/api/flows');fs=(d.flows||d||[]).sort((a,b)=>b.mtime-a.mtime);let gd=await api('/api/groups');_groups=(gd.groups||[])}
+async function sa(f){return await api('/api/flow/save','POST',f)}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function d(){df=true;document.getElementById('tit').textContent='✏️ '+(document.getElementById('fn').value||'Flow')+' *'}
+function updateUI(){
+  let ed=!!(cf&&cf.name||df);
+  document.getElementById('meta-bar').classList.toggle('show',ed);
+  document.getElementById('steps-head').classList.toggle('show',ed);
+  document.getElementById('sl').classList.toggle('show',ed);
+  document.getElementById('preview-state').style.display=ed?'none':'block';
+  document.getElementById('adding-bar').classList.toggle('editing',ed);
+  document.getElementById('adding-bar').innerHTML=ed?'点击 Flow 添加到当前编排':'点击 <b style="color:#fbbf24">可编排</b> Flow 查看详情';
+  let btns=document.getElementById('ph-btns');
+  if(ed){
+    btns.innerHTML=`<button class="btn btn-sm" onclick="exitEdit()" style="margin-right:6px">退出编排</button><button class="btn btn-primary btn-sm" onclick="save()">💾 保存</button>`;
+    document.getElementById('right-title').textContent='💡 使用说明';
+    let rId=cf&&cf.id?cf.id.slice(0,4):'?';
+    document.getElementById('right-hint').innerHTML=
+      '编辑中：<b>'+esc(cf?cf.name:'?')+'</b><br>'
+      +'点击左侧添加到编排<br>'
+      +'点击步骤名查看引用详情<br>'
+      +'运行：<code>zk replay flow run '+rId+'</code>';
+  }else if(pi){
+    btns.innerHTML='';
+  }else{
+    btns.innerHTML='';
+  }
+}
+function toast(msg,warn){let t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(warn?' warn':'');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
+
+let _modalResolve=null;
+function showModal(title,msg,type='alert'){
+  let o=document.getElementById('modal-overlay');
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-msg').innerHTML=msg;
+  let act=document.getElementById('modal-act');
+  if(type==='confirm'){
+    act.innerHTML='<button class="btn btn-sm" id="modal-cancel">取消</button><button class="btn btn-primary btn-sm" id="modal-ok">确认</button>';
+  }else{
+    act.innerHTML='<button class="btn btn-primary btn-sm" id="modal-ok">确定</button>';
+  }
+  o.classList.add('show');
+  return new Promise(resolve=>{
+    _modalResolve=resolve;
+    let ok=document.getElementById('modal-ok');
+    ok.onclick=()=>{o.classList.remove('show');resolve(true)};
+    ok.focus();
+    let cancel=document.getElementById('modal-cancel');
+    if(cancel)cancel.onclick=()=>{o.classList.remove('show');resolve(false)};
+  });
+}
+function alertModal(title,msg){return showModal(title,msg,'alert')}
+function confirmModal(title,msg){return showModal(title,msg,'confirm')}
+
+document.getElementById('modal-overlay').addEventListener('click',function(e){
+  if(e.target===this){this.classList.remove('show');if(_modalResolve)_modalResolve(false)}
+});
+
+function isAtomic(flow){let ss=flow.steps||[];return ss.length>0&&ss.every(s=>(s.type||'event')!=='flow')}
+
+let collapsed=new Set();
+function toggleGroup(gid){collapsed.has(gid)?collapsed.delete(gid):collapsed.add(gid);rFlows();}
+function addToGroup(gid){if(cf){cf.group_id=gid;se();rFlows();toast('已加入分组 → '+_gn(gid))}}
+let dragFlowId='',dragScrollTimer=null;
+function dragFlowStart(e,id){dragFlowId=id;e.dataTransfer.effectAllowed='move';}
+
+// 拖动时自动滚动左侧列表
+document.addEventListener('dragover', function(e){
+  let pl=document.getElementById('flist');
+  if(!pl||!dragFlowId)return;
+  let rect=pl.getBoundingClientRect(), py=e.clientY;
+  if(py<rect.top+60){pl.scrollTop-=Math.max(3,Math.round((rect.top+60-py)/3));}
+  else if(py>rect.bottom-60){pl.scrollTop+=Math.max(3,Math.round((py-rect.bottom+60)/3));}
+});
+async function moveFlowToGroup(gid){
+  if(!dragFlowId)return;
+  let d=await api('/api/flow?name='+encodeURIComponent(dragFlowId));
+  let flow=d.flow||d;if(!flow||flow.error)return;
+  flow.group_id=gid;
+  delete flow.group;
+  await sa(flow);
+  await ld();rFlows();
+  toast('已移至 → '+(_gn(gid)||'未分组'));
+  dragFlowId='';
+}
+
+function rFlows(){
+  let s=(document.getElementById('fs').value||'').toLowerCase();
+  let ff=fs.filter(f=>f.name.toLowerCase().includes(s));
+  // 分组 — 按 group_id 分栏，显示 group name
+  let groups={};
+  ff.forEach(f=>{let g=f.group_id||'';if(!groups[g])groups[g]=[];groups[g].push(f)});
+  let html='';
+  // 按每组最大 mtime 排序
+  for(let [gid,items] of Object.entries(groups).sort((a,b)=>{
+    let am=Math.max(...a[1].map(f=>f.mtime||0));
+    let bm=Math.max(...b[1].map(f=>f.mtime||0));
+    return bm-am;
+  })){
+    items.sort((a,b)=>b.mtime-a.mtime);
+    if(!gid){
+      // 未分组
+      html+=items.map(fc).join('');
+    }else{
+      let gname=_gn(gid)||gid;
+      let cc=collapsed.has(gid),cls=cc?' collapsed':'';
+      html+=`<div class="group-header${cls}" onclick="toggleGroup('${esc(gid)}')" ondragover="event.preventDefault();this.style.borderColor='#58a6ff'" ondragleave="this.style.borderColor=''" ondrop="event.preventDefault();this.style.borderColor='';moveFlowToGroup('${esc(gid)}')"><span class="grp-arrow">▾</span>📂 ${esc(gname)} <span style="font-size:12px;color:#484f58">(${items.length})</span><span style="margin-left:auto;display:flex;gap:4px" onclick="event.stopPropagation()"><button class="btn btn-xs" onclick="renameGroup('${esc(gid)}')" title="重命名分组" style="padding:0 4px;font-size:11px">✎</button><button class="btn btn-xs" onclick="deleteGroup('${esc(gid)}')" title="删除分组" style="padding:0 4px;font-size:11px;color:#f85149">✕</button>${cf?`<button class="btn btn-xs" onclick="addToGroup('${esc(gid)}')" style="padding:0 5px;font-size:12px" title="将当前流程加入此分组">＋</button>`:''}</span></div>`;
+      html+=`<div class="group-body${cls}">${items.map(fc).join('')}</div>`;
+    }
+  }
+  // "移到未分组"拖放区域置顶
+  let outHtml='';
+  if(Object.keys(groups).some(g=>g)){
+    outHtml=`<div style="margin-bottom:8px;padding:6px 12px;border:1px dashed #21262d;border-radius:6px;font-size:12px;color:#30363d;text-align:center;cursor:default"
+      ondragover="event.preventDefault();this.style.borderColor='#58a6ff';this.style.color='#58a6ff'"
+      ondragleave="this.style.borderColor='';this.style.color=''"
+      ondrop="event.preventDefault();this.style.borderColor='';this.style.color='';moveFlowToGroup('')">拖到此处移出分组</div>`;
+  }
+  document.getElementById('flist').innerHTML=outHtml+html||'<div class="empty-state">暂无 Flow</div>';
+
+  function fc(f){
+    let act=(f.id===ci||f.id===pi)?' active':'';
+    let badge=f.badge?`<span class="fc-badge ${f.badge==='不可编排'?'task':'flow'}">${f.badge}</span>`:'';
+    let idBadge=f.id?`<span class="fc-id">${f.id.slice(0,4)}</span>`:'';
+    let pc=f.profile_count||0;
+    let profiles=pc?Object.entries(f.profiles||{}).map(([k,v])=>k.replace('x','×')+(v?' ('+v+')':'')).join(', '):'';
+    let profilesHtml=pc?`<span class="fc-meta" style="color:#58a6ff;margin-left:4px">📱 ${pc} 个分辨率</span>`:'';
+    let platBadge=f.platform?`<span class="fc-badge" style="background:rgba(139,148,158,.1);color:#8b949e;font-size:12px;margin-left:4px">${f.platform}</span>`:'';
+    return `<div class="flow-card${act}" onclick="onFlowClick('${f.id}')" draggable="true" ondragstart="dragFlowStart(event,'${f.id}')">
+      <span class="fc-name">${idBadge}${esc(f.name)}${platBadge}</span><span class="fc-meta">${f.steps||0} 步</span>
+      ${profilesHtml}${badge}
+      <button class="fc-del" onclick="event.stopPropagation();deleteFlow('${f.id}')" title="删除">✕</button>
+    </div>`;
+  }
+}
+
+async function deleteFlow(id){
+  let name=fn(id);
+  if(!await confirmModal('删除确认','确定删除 Flow「<b>'+esc(name)+'</b>」？<br>此操作不可恢复。'))return;
+  await api('/api/flow/delete','POST',{id:id});
+  if(id===ci){ci='';cf=null;selected.clear();expanded=-1;se();updateUI()}
+  if(id===pi)pi='';
+  await ld();rFlows();
+  toast('已删除 → '+name);
+}
+
+const PLATFORMS=['win','adb','web','mixed'];
+
+function _pickPlatform(callback){
+  let opts=PLATFORMS.map(p=>`<option value="${p}">${p}</option>`).join('');
+  let html=`<div><p>选择平台：</p><select id="_platSel" style="width:100%;padding:6px;margin-top:6px;font-size:16px">${opts}</select></div>`;
+  showModal('选择平台',html,'confirm').then(ok=>{
+    if(ok)callback(document.getElementById('_platSel').value);
+  });
+}
+
+async function newGroup(){
+  let g=prompt('新建分组名称','');
+  if(!g||!g.trim())return;
+  g=g.trim();
+  let res=await api('/api/groups/create','POST',{name:g});
+  if(res.ok){await ld();rFlows();toast('分组已创建 → '+g)}
+  else{alert(res.error||'创建失败')}
+}
+
+async function renameGroup(gid){
+  let old=_gn(gid);
+  let n=prompt('重命名分组',old);
+  if(!n||!n.trim()||n.trim()===old)return;
+  let res=await api('/api/groups/rename','POST',{id:gid,name:n.trim()});
+  if(res.ok){await ld();rFlows();toast('分组已重命名 → '+n.trim())}
+  else{alert('重命名失败')}
+}
+
+async function deleteGroup(gid){
+  let name=_gn(gid);
+  if(!confirm(`删除分组「${name}」？\n（分组内的 Flow 不会被删除，只会变为"未分组"）`))return;
+  await api('/api/groups/delete','POST',{id:gid});
+  await ld();rFlows();toast('分组已删除');
+}
+
+async function newFlow(){
+  _pickPlatform(async plat=>{
+    if(df&&!await confirmModal('未保存','有未保存的修改，确定放弃？'))return;
+    cf={name:'',description:'',steps:[],platform:plat};ci='';pi='';df=true;selected.clear();expanded=-1;se();rFlows();updateUI();
+    document.getElementById('fn').focus();
+  });
+}
+
+async function onFlowClick(id){
+  // 编辑模式 → 点击 Flow 添加到步骤
+  if(cf&&cf.name){
+    if(id===ci){toast('不能引用自身',true);return}
+    let ref=fs.find(f=>f.id===id);
+    // 平台校验：只能引用同 platform 或 mixed 的 flow
+    let cfPlat=cf.platform||'';
+    let refPlat=ref?ref.platform||'':'';
+    if(cfPlat&&refPlat&&refPlat!==cfPlat&&refPlat!=='mixed'&&cfPlat!=='mixed'){
+      toast(`平台不匹配：当前 ${cfPlat}，目标 ${refPlat}`,true);return;
+    }
+    cf.steps.push({type:'flow',flow_id:id,flow_name:ref?ref.name:id});rs();d();
+    toast('已添加 → '+(ref?ref.name:id));return;
+  }
+  // 预览模式 → 切换预览
+  await previewFlow(id);
+}
+
+async function renameFlow(id){
+  let d=await api('/api/flow?name='+encodeURIComponent(id));
+  let f=d.flow||d;if(!f||f.error)return;
+  let newName=prompt('新名称', f.name);
+  if(!newName||newName===f.name)return;
+  f.name=newName.trim();
+  await sa(f);
+  await ld();rFlows();
+  toast('已改名 → '+f.name);
+}
+
+function openFlowEditor(id){
+  window.open('/editor/?flow='+encodeURIComponent(id), '_blank');
+}
+
+async function previewFlow(id){
+  let d=await api('/api/flow?name='+encodeURIComponent(id));
+  let f=d.flow||d;if(!f||f.error)return;
+  let atm=isAtomic(f);
+  let fid=f.id||id;
+  pi=fid;cf=null;ci='';df=false;selected.clear();expanded=-1;rFlows();updateUI();
+  // 中间预览状态
+  let prev=document.getElementById('preview-state');
+  let grpStr=f.group_id?`<span style="font-size:12px;color:#d29922;background:rgba(210,153,34,.1);padding:1px 6px;border-radius:3px;margin-left:4px">📂 ${esc(_gn(f.group_id))}</span>`:'';
+  let idStr=f.id?`<span style="font-size:15px;color:#484f58;font-family:monospace">${f.id}</span>`:'';
+  let renameBtn=`<button class="btn btn-xs" onclick="renameFlow('${fid}')" title="改名" style="padding:1px 5px;font-size:12px">✎</button>`;
+  let stepsHtml=(f.steps||[]).map((s,i)=>buildStepCard(s,i,true)).join('');
+  if((f.steps||[]).length===0) stepsHtml='<div class="empty-state" style="padding:20px">无步骤</div>';
+  let editBtn=atm
+    ?`<button class="btn btn-primary btn-sm" onclick="openFlowEditor('${fid}')" style="margin-top:8px">✏️ 编辑事件</button>`
+    :`<button class="btn btn-primary btn-sm" onclick="startEdit()" style="margin-top:8px">✏️ 进入编排</button>`;
+  prev.innerHTML=`<div class="pv-flow-head">
+    <div class="pv-flow-name">📋 ${esc(f.name)} ${grpStr} ${idStr} ${renameBtn}</div>
+    ${editBtn}
+  </div>
+  <div class="pv-flow-desc">${esc(f.description||'无描述')}</div>
+  <div class="pv-flow-body">${stepsHtml}</div>`;
+  prev.style.display='block';
+  // 右侧预览
+  await showRightPreview(f);
+  // 标题
+  document.getElementById('tit').textContent='📋 '+esc(f.name);
+  let rId=f.id?f.id.slice(0,4):'?';
+  document.getElementById('right-title').textContent='💡 使用说明';
+  document.getElementById('right-hint').innerHTML=
+    '预览：<b>'+esc(f.name)+'</b>'+(atm?' <span style="color:#d29922">（不可编排）</span>':'')+'<br>'
+    +'运行：<code>zk replay flow run '+rId+'</code>';
+}
+
+async function startEdit(){
+  let d=await api('/api/flow?name='+encodeURIComponent(pi));
+  let f=d.flow||d;if(!f||f.error)return;
+  cf=f;ci=f.id||pi;df=false;selected.clear();expanded=-1;se();rFlows();updateUI();
+}
+
+function exitEdit(){
+  if(df){toast('请先保存或放弃修改',true);return}
+  cf=null;ci='';df=false;selected.clear();expanded=-1;
+  se();rFlows();updateUI();
+  document.getElementById('preview-area').innerHTML='<p class="pv-empty">点击 Flow 名称查看详情</p>';
+  document.getElementById('tit').textContent='Flow 编排器';
+  document.getElementById('right-title').textContent='💡 使用说明';
+  document.getElementById('right-hint').innerHTML='点击左侧查看详情<br>运行：<code>zk replay flow run &lt;id前4位&gt;</code>';
+}
+
+function buildStepCard(st, i, showFlowRef){
+  let t=st.type||'event',desc='?',icon='';
+  if(t==='event'){
+    let a=st.action||'?';
+    if(a==='tap'||a==='click'){desc=`${a} (${st.x||0}, ${st.y||0})`;icon='👆'}
+    else if(a==='dblclick'){desc=`dblclick (${st.x||0}, ${st.y||0})`;icon='👆'}
+    else if(a==='swipe'){desc=`swipe (${st.x1||0},${st.y1||0}) → (${st.x2||0},${st.y2||0})`;icon='👈'}
+    else if(a==='scroll'){desc=`scroll (${st.x||0},${st.y||0}) δ${st.delta_y||st.dy||0}`;icon='🔄'}
+    else if(a==='keyevent'){desc=`按键 ${st.code||'?'}`;icon='⌨️'}
+    else if(a==='keyboard'){desc=`键盘 ${(st.keys||[]).join('+')||'?'}`;icon='⌨️'}
+    else if(a==='text'||a==='type'){desc=`"${st.content||''}"`;icon='📝'}
+    else if(a==='navigate'){desc=st.url||st.value||'navigate';icon='🌐'}
+    else if(a==='adb'){desc=st.adb_action==='open-schema'?`Schema: ${st.content||''}`:`adb ${st.adb_action||'?'} ${st.package||''}`;icon='💻'}
+    else if(a==='launch'){desc=`启动 ${st.target||'?'}`;icon='🚀'}
+    else if(a==='quit'){desc=`退出 ${st.target||'?'}`;icon='🗑'}
+    else{desc=a;icon='⚙️'}
+  }else if(t==='pause'){desc=st.hint||'手动操作';icon='⏸️'}
+  else if(t==='adb_cmd'){desc=`$ ${st.command||''}`;icon='⚡'}
+  else if(t==='flow'){
+    let refId=st.flow_id||st.flow_name||'?';
+    let rf=fs.find(f=>f.id===refId||f.name===refId);
+    desc=`→ ${rf?rf.name:refId}`;icon='🔗';
+    st._resolvedName=rf?rf.name:refId;
+  }
+  let refBadge=showFlowRef&&t==='flow'?' <span class="sbadge">编排</span>':'';
+  let onClick=t==='flow'&&st._resolvedName?`onclick="event.stopPropagation();previewFlow('${esc(st._resolvedName)}')"`:'';
+  // 延迟信息
+  let db=st.delay_before_ms||0, da=st.delay_after_ms||0;
+  let delayParts=[];
+  if(db>=1000)delayParts.push(`前${(db/1000).toFixed(1)}s`);
+  else if(db>0)delayParts.push(`前${db}ms`);
+  if(da>=1000)delayParts.push(`后${(da/1000).toFixed(1)}s`);
+  else if(da>0)delayParts.push(`后${da}ms`);
+  let delayHtml=delayParts.length?`<span class="smeta">${delayParts.join(' ')}</span>`:'';
+  return `<div class="step-card" ${onClick} style="${onClick?'cursor:pointer':''}">
+    <span class="sn">${i+1}</span><span class="si">${icon}</span>
+    <span class="sd">${esc(desc)}${refBadge}</span>
+    ${delayHtml}
+  </div>`;
+}
+
+function buildStepPreview(steps, max){
+  if(!steps||!steps.length)return '<div class="ref-item"><span class="rd">无步骤</span></div>';
+  let list=steps.slice(0, max||steps.length);
+  return list.map((st,j)=>buildStepCard(st,j,false)).join('')
+    +(max&&steps.length>max?`<div class="ref-item" style="color:#475569;font-size:15px">... 还有 ${steps.length-max} 步</div>`:'');
+}
+
+let _flowCache={};
+async function loadSubFlow(name){
+  if(_flowCache[name])return _flowCache[name];
+  try{let d=await api('/api/flow?name='+encodeURIComponent(name));return _flowCache[name]=(d.flow||d);}
+  catch(e){return null;}
+}
+
+function eventDesc(st){
+  let t=st.type||'event',desc='?',icon='';
+  if(t==='event'){
+    let a=st.action||'?';
+    if(a==='tap'||a==='click'){desc=`${a} (${st.x||0}, ${st.y||0})`;icon='👆'}
+    else if(a==='dblclick'){desc=`dblclick (${st.x||0}, ${st.y||0})`;icon='👆'}
+    else if(a==='swipe'){desc=`swipe (${st.x1||0},${st.y1||0})→(${st.x2||0},${st.y2||0})`;icon='👈'}
+    else if(a==='scroll'){desc=`scroll (${st.x||0},${st.y||0}) δ${st.delta_y||st.dy||0}`;icon='🔄'}
+    else if(a==='keyevent'){desc=`按键 ${st.code||'?'}`;icon='⌨️'}
+    else if(a==='keyboard'){desc=`键盘 ${(st.keys||[]).join('+')||'?'}`;icon='⌨️'}
+    else if(a==='text'||a==='type'){desc=`"${st.content||''}"`;icon='📝'}
+    else if(a==='navigate'){desc=st.url||st.value||'navigate';icon='🌐'}
+    else if(a==='adb'){desc=st.adb_action==='open-schema'?`Schema: ${st.content||''}`:`adb ${st.adb_action||'?'} ${st.package||''}`;icon='💻'}
+    else if(a==='launch'){desc=`启动 ${st.target||'?'}`;icon='🚀'}
+    else if(a==='quit'){desc=`退出 ${st.target||'?'}`;icon='🗑'}
+    else{desc=a;icon='⚙️'}
+  }else if(t==='pause'){desc=st.hint||'手动操作';icon='⏸️'}
+  else if(t==='adb_cmd'){desc=`$ ${st.command||''}`;icon='⚡'}
+  else if(t==='flow'){desc=`→ ${st.flow_name||'?'}`;icon='🔗'}
+  let db=st.delay_before_ms||0,da=st.delay_after_ms||0,dl='';
+  if(db>=1000)dl+=`前${(db/1000).toFixed(1)}s `;
+  else if(db>0)dl+=`前${db}ms `;
+  if(da>=1000)dl+=`后${(da/1000).toFixed(1)}s`;
+  else if(da>0)dl+=`后${da}ms`;
+  return {desc,icon,dl};
+}
+
+async function showRightPreview(f){
+  let isAtm=isAtomic(f),stype=isAtm?'task':'flow',slabel=isAtm?'不可编排':'可编排';
+  let title=`<div class="pv-name">📋 ${esc(f.name)}<span class="pv-badge ${stype}">${slabel}</span></div>`;
+
+  if(isAtm){
+    document.getElementById('preview-area').innerHTML=title+buildStepPreview(f.steps);
+    return;
+  }
+
+  // 递归展开到最底层原子 flow，保留分组标题
+  let globalIdx=0;
+  async function renderGroup(flow, groupName){
+    let html='';
+    for(let s of flow.steps||[]){
+      let t=s.type||'event';
+      if(t==='flow'){
+        let refId=s.flow_id||s.flow_name;
+        if(!refId)continue;
+        let sub=await loadSubFlow(refId);
+        if(!sub)continue;
+        if(isAtomic(sub)){
+          // 最底层原子 flow：渲染为分组
+          let eventsHtml='';
+          for(let st of sub.steps||[]){
+            globalIdx++;
+            let ed=eventDesc(st);
+            eventsHtml+=`<div class="ref-item"><span class="ri">${globalIdx}.</span><span>${ed.icon}</span><span class="rd">${esc(ed.desc)}</span>${ed.dl?`<span style="font-size:9px;color:#30363d;margin-left:auto;flex-shrink:0">${ed.dl}</span>`:''}</div>`;
+          }
+          html+=`<div style="margin-bottom:8px;border:1px solid #21262d;border-radius:6px;overflow:hidden">
+            <div style="padding:5px 10px;background:#161b22;font-size:16px;font-weight:600;color:#58a6ff;cursor:pointer;user-select:none"
+                 onclick="let s=this.nextElementSibling;s.style.display=s.style.display==='none'?'block':'none'">📂 ${esc(sub.name)} ▾</div>
+            <div style="padding:4px 10px 6px;display:block">${eventsHtml||'<div class="ref-item"><span class="rd">无步骤</span></div>'}</div>
+          </div>`;
+        }else{
+          // 中间层级：递归展开
+          html+=await renderGroup(sub, sub.name);
+        }
+      }else{
+        // 直接事件
+        globalIdx++;
+        let ed=eventDesc(s);
+        html+=`<div class="ref-item"><span class="ri">${globalIdx}.</span><span>${ed.icon}</span><span class="rd">${esc(ed.desc)}</span>${ed.dl?`<span style="font-size:9px;color:#30363d;margin-left:auto;flex-shrink:0">${ed.dl}</span>`:''}</div>`;
+      }
+    }
+    return html;
+  }
+  let html=await renderGroup(f, f.name);
+  document.getElementById('preview-area').innerHTML=title+(html||'<div class="ref-item"><span class="rd">无步骤</span></div>');
+}
+
+function se(){
+  document.getElementById('fid').value=cf?cf.id||'':'';
+  // 分组下拉（基于 _groups 列表）
+  let fgEl=document.getElementById('fg');
+  let curGid=cf?cf.group_id||'':'';
+  let opts='<option value="">未分组</option>';
+  _groups.forEach(g=>{opts+=`<option value="${esc(g.id)}"${g.id===curGid?' selected':''}>${esc(g.name)}</option>`});
+  fgEl.innerHTML=opts;
+  fgEl.value=curGid;
+  document.getElementById('fn').value=cf?cf.name||'':'';
+  document.getElementById('fd').value=cf?cf.description||'':'';
+  document.getElementById('tit').textContent=cf?'✏️ '+cf.name:'Flow 编排器';
+  rs();
+}
+
+async function save(){
+  if(!cf||!cf.name&&!document.getElementById('fn').value.trim()){await alertModal('提示','请输入 Flow 名称');return}
+  let n=document.getElementById('fn').value.trim();
+  if(!n){await alertModal('提示','请输入 Flow 名称');return}
+  cf.name=n;cf.description=document.getElementById('fd').value.trim();
+  cf.group_id=document.getElementById('fg').value;
+  delete cf.group;
+  await sa(cf);df=false;
+  // 重新加载获取服务器生成的 id
+  let d=await api('/api/flow?name='+encodeURIComponent(cf.id||n));
+  let f=d.flow||d;if(f&&!f.error)cf=f;
+  ci=cf.id||'';pi=ci;
+  await ld();rFlows();
+  se();document.getElementById('tit').textContent='✏️ '+n;toast('已保存');
+  // 保存后退出编排
+  exitEdit();
+}
+
+function rs(){
+  let ss=cf?cf.steps||[]:[];document.getElementById('sc').textContent='('+ss.length+')';
+  document.getElementById('sl').innerHTML=ss.length?ss.map((s,i)=>{
+    let refId=s.flow_id||s.flow_name||'?',ref=fs.find(f=>f.id===refId||f.name===refId);
+    let name=ref?ref.name:refId;
+    let idStr=ref&&ref.id?'<span class="smeta" style="font-family:monospace;color:#30363d">'+ref.id.slice(0,4)+'</span>':'';
+    let meta=ref?'<span class="smeta">'+(ref.steps||0)+' 步</span>':'';
+    let selCls=selected.has(i)?' selected':'',expCls=expanded===i?' show':'';
+    return `<div class="step-card${selCls}" data-idx="${i}" draggable="true">
+      <span class="sn">${i+1}</span><span class="si">🔗</span>
+      <span class="sd" onclick="onStepClick(event,${i})" title="${esc(name)}">${esc(name)}</span>
+      ${idStr}${meta}<span class="sbadge">Flow</span>
+      <span class="sact">
+        <button class="btn btn-xs" onclick="event.stopPropagation();toggleExpand(${i})">🔍</button>
+        <button class="btn btn-xs btn-danger" onclick="event.stopPropagation();cf.steps.splice(${i},1);expanded=-1;rs();d()">✕</button>
+      </span>
+      <div class="step-ref-preview${expCls}" id="rp-${i}"></div>
+    </div>`;
+  }).join(''):'<div class="empty-state" style="padding:40px">暂无步骤<br><span style="font-size:18px;color:#475569">点击左侧 Flow 添加到编排</span></div>';
+  bindDrag();
+  if(expanded>=0)loadRefPreview(expanded);
+}
+
+function bindDrag(){
+  document.querySelectorAll('.step-card[draggable]').forEach(el=>{
+    el.addEventListener('dragstart',e=>{dragFrom=parseInt(el.dataset.idx);e.dataTransfer.effectAllowed='move';el.style.opacity='0.4'});
+    el.addEventListener('dragend',e=>{el.style.opacity=''});
+    el.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='move';el.classList.add('drag-over')});
+    el.addEventListener('dragleave',e=>{el.classList.remove('drag-over')});
+    el.addEventListener('drop',e=>{
+      e.preventDefault();el.classList.remove('drag-over');
+      let to=parseInt(el.dataset.idx);
+      if(dragFrom!==to&&dragFrom>=0){let[r]=cf.steps.splice(dragFrom,1);cf.steps.splice(to,0,r);selected.clear();expanded=-1;rs();d()}
+    });
+  });
+}
+
+function onStepClick(e,i){
+  if(e.target.tagName==='BUTTON')return;
+  expanded=expanded===i?-1:i;rs();
+  if(expanded>=0)loadRefPreview(expanded);
+  else document.getElementById('preview-area').innerHTML='<p class="pv-empty">点击步骤名称查看</p>';
+}
+
+async function toggleExpand(i){expanded=expanded===i?-1:i;rs();if(expanded>=0)loadRefPreview(expanded)}
+async function loadRefPreview(i){
+  let s=cf.steps[i];if(!s||s.type!=='flow')return;
+  let refId=s.flow_id||s.flow_name;
+  let d=await api('/api/flow?name='+encodeURIComponent(refId||''));
+  let f=d.flow||d,steps=f.steps||[];
+  let isAtm=isAtomic(f),stype=isAtm?'task':'flow',slabel=isAtm?'不可编排':'可编排';
+  let html=steps.length?steps.map((st,j)=>{
+    let ed=eventDesc(st);
+    return `<div class="ref-item"><span class="ri">${j+1}.</span><span>${ed.icon}</span><span class="rd">${esc(ed.desc)}</span>${ed.dl?`<span style="font-size:9px;color:#30363d;margin-left:auto;flex-shrink:0">${ed.dl}</span>`:''}</div>`;
+  }).join(''):'<div class="ref-item"><span class="rd">无步骤</span></div>';
+  // 右侧预览
+  document.getElementById('preview-area').innerHTML=
+    `<div class="pv-name">📋 ${esc(s.flow_name||'?')}<span class="pv-badge ${stype}">${slabel}</span></div>${html}`;
+  // 内联展开
+  let rp=document.getElementById('rp-'+i);if(rp)rp.innerHTML=html;
+}
+
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT')return;
+  if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();save()}
+  if(e.key==='Escape')rs();
+});
+
+init();
+</script>
+</body>
+</html>
